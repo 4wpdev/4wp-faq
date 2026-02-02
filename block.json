@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "forwp/faq",
+  "title": "4WP FAQ",
+  "category": "widgets",
+  "icon": "editor-help",
+  "description": "FAQ wrapper for accordion items.",
+  "textdomain": "forwp-faq",
+  "supports": {
+    "html": false,
+    "className": true
+  },
+  "editorScript": "file:./build/index.js"
+}
+
