@@ -45,6 +45,9 @@ const isAccordionItemBlock = ( name ) =>
 	typeof name === 'string' &&
 	( name === 'core/accordion-item' || name.includes( 'accordion-item' ) );
 
+const isAccordionBlock = ( name ) =>
+	typeof name === 'string' && name.includes( 'accordion' ) && ! name.includes( 'accordion-item' );
+
 const isDetailsBlock = ( name ) =>
 	typeof name === 'string' &&
 	( name === 'core/details' || name.endsWith( '/details' ) );
@@ -118,7 +121,7 @@ registerBlockType( 'forwp/faq', {
 					</PanelBody>
 				</InspectorControls>
 				<div className={ props.className }>
-					<InnerBlocks allowedBlocks={ [ 'core/accordion', 'core/details' ] } />
+					<InnerBlocks />
 				</div>
 			</Fragment>
 		);
@@ -128,7 +131,7 @@ registerBlockType( 'forwp/faq', {
 		from: [
 			{
 				type: 'block',
-				blocks: [ 'core/accordion' ],
+				blocks: [ 'core/accordion', 'core/accordion-group' ],
 				transform: ( attributes, innerBlocks ) =>
 					createBlock( 'forwp/faq', {}, [
 						createBlock( 'core/accordion', attributes, innerBlocks ),
@@ -159,7 +162,7 @@ registerBlockType( 'forwp/faq', {
 const withFaqTransform = createHigherOrderComponent(
 	( BlockEdit ) =>
 		( props ) => {
-			const isAccordion = props.name === 'core/accordion';
+			const isAccordion = isAccordionBlock( props.name );
 			const isAccordionItem = props.name === 'core/accordion-item';
 
 			if ( ! isAccordion && ! isAccordionItem ) {
@@ -181,11 +184,7 @@ const withFaqTransform = createHigherOrderComponent(
 					replaceBlock(
 						props.clientId,
 						createBlock( 'forwp/faq', {}, [
-							createBlock(
-								'core/accordion',
-								props.attributes,
-								props.innerBlocks
-							),
+							createBlock( props.name, props.attributes, props.innerBlocks ),
 						] )
 					);
 					return;
@@ -193,12 +192,12 @@ const withFaqTransform = createHigherOrderComponent(
 
 				const parentId = getBlockRootClientId( props.clientId );
 				const parentBlock = parentId ? getBlock( parentId ) : null;
-				if ( parentBlock && parentBlock.name === 'core/accordion' ) {
+				if ( parentBlock && isAccordionBlock( parentBlock.name ) ) {
 					replaceBlock(
 						parentId,
 						createBlock( 'forwp/faq', {}, [
 							createBlock(
-								'core/accordion',
+								parentBlock.name,
 								parentBlock.attributes,
 								parentBlock.innerBlocks
 							),
@@ -210,13 +209,7 @@ const withFaqTransform = createHigherOrderComponent(
 				replaceBlock(
 					props.clientId,
 					createBlock( 'forwp/faq', {}, [
-						createBlock( 'core/accordion', {}, [
-							createBlock(
-								'core/accordion-item',
-								props.attributes,
-								props.innerBlocks
-							),
-						] ),
+						createBlock( props.name, props.attributes, props.innerBlocks ),
 					] )
 				);
 			};
