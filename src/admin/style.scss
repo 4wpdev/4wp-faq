@@ -1,0 +1,256 @@
+/**
+ * Admin React shell — aligns with 4wp-weather / wp-components density.
+ */
+
+.forwp-faq-admin-shell {
+	max-width: 1100px;
+
+	h1.forwp-faq-admin-heading {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 1.6rem;
+		font-weight: 600;
+		margin-bottom: 0.25rem;
+	}
+
+	.forwp-faq-admin-heading__icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		color: var(--wp-admin-theme-color, #3858e9);
+		line-height: 0;
+
+		svg {
+			display: block;
+		}
+	}
+
+	.forwp-faq-admin-heading__text {
+		line-height: 1.25;
+	}
+}
+
+.forwp-faq-admin-root {
+	margin-top: 1rem;
+	padding-bottom: 2rem;
+}
+
+.forwp-faq-admin-app {
+	background: #fff;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+	overflow: hidden;
+
+	.forwp-faq-tab-panel {
+		.components-tab-panel__tabs {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: stretch;
+			gap: 0;
+			margin: 0;
+			padding: 0;
+			background: #fafafa;
+			border-bottom: 1px solid #e0e0e0;
+
+			button.components-tab-panel__tabs-item {
+				border-radius: 0;
+				margin: 0 !important;
+				height: auto;
+				min-height: 0;
+				font-weight: 500;
+				padding: 10px 14px;
+				border: 1px solid transparent;
+				border-bottom: none;
+				box-shadow: none;
+
+				&.is-active {
+					background: #fff;
+					border-color: #e0e0e0;
+					border-bottom-color: #fff;
+					margin-bottom: -1px !important;
+					position: relative;
+					z-index: 1;
+				}
+			}
+		}
+
+		.components-tab-panel__tab-content {
+			padding: 1.25rem 1.5rem 1.5rem;
+		}
+	}
+}
+
+.forwp-faq-tab-loading {
+	display: flex;
+	justify-content: center;
+	padding: 2rem;
+}
+
+.forwp-faq-intro-card {
+	margin-bottom: 1rem;
+	border: 1px solid #e8e8e8;
+
+	&__title {
+		margin: 0 0 0.5rem;
+		font-size: 1.05rem;
+	}
+
+	&__text {
+		margin: 0 0 0.75rem;
+		color: #50575e;
+		line-height: 1.55;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+}
+
+.forwp-faq-settings-layout {
+	max-width: 820px;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.forwp-faq-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+	gap: 1rem;
+}
+
+.forwp-faq-stat {
+	display: flex;
+	flex-direction: column;
+	gap: 0.2rem;
+	padding: 0.75rem;
+	background: #f6f7f7;
+	border-radius: 6px;
+	border: 1px solid #e8e8e8;
+
+	&__value {
+		font-size: 1.5rem;
+		font-weight: 600;
+		line-height: 1.2;
+		color: #1d2327;
+	}
+
+	&__label {
+		font-size: 0.8rem;
+		color: #50575e;
+		line-height: 1.35;
+	}
+
+	&__hint {
+		font-size: 0.72rem;
+		color: #646970;
+	}
+}
+
+.forwp-faq-actions-card {
+	&__meta {
+		margin: 0.35rem 0 0;
+		color: #646970;
+		font-size: 0.9rem;
+	}
+}
+
+.forwp-faq-actions-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.forwp-faq-actions-divider {
+	margin: 1.25rem 0;
+	border: none;
+	border-top: 1px solid #e8e8e8;
+}
+
+.forwp-faq-reset-intro {
+	margin: 0 0 0.75rem;
+	color: #50575e;
+}
+
+.forwp-faq-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.5rem;
+	margin-top: 1rem;
+}
+
+.forwp-faq-registry-layout {
+	max-width: 720px;
+}
+
+.forwp-faq-registry-card {
+	&__meta {
+		margin: 0 0 0.5rem;
+
+		&--muted {
+			color: #646970;
+		}
+	}
+
+	&__actions {
+		margin-top: 1rem;
+	}
+}
+
+.forwp-faq-docs-layout {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	max-width: 820px;
+}
+
+.forwp-faq-doc-card__body {
+	p {
+		margin: 0 0 0.85rem;
+		line-height: 1.55;
+		color: #1d2327;
+
+		&:last-child {
+			margin-bottom: 0;
+		}
+	}
+
+	strong {
+		font-weight: 600;
+	}
+}
+
+.forwp-faq-doc-list {
+	margin: 0 0 0.85rem 1.25rem;
+	padding: 0;
+	line-height: 1.55;
+
+	li {
+		margin-bottom: 0.35rem;
+	}
+}
+
+.forwp-faq-doc-pre {
+	margin: 0 0 0.85rem;
+	padding: 12px 14px;
+	background: #f6f7f7;
+	border: 1px solid #e0e0e0;
+	border-radius: 4px;
+	overflow-x: auto;
+	font-size: 12px;
+	line-height: 1.45;
+
+	code {
+		font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+		white-space: pre;
+	}
+}
+
+.forwp-faq-doc-muted {
+	color: #646970 !important;
+	font-size: 0.92em;
+}

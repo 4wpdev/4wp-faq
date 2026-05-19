@@ -6,10 +6,16 @@
   "category": "widgets",
   "icon": "editor-help",
   "description": "FAQ wrapper for accordion items.",
-  "textdomain": "forwp-faq",
+  "textdomain": "4wp-faq",
   "supports": {
     "html": false,
     "className": true
+  },
+  "attributes": {
+    "jsonLd": {
+      "type": "string",
+      "default": ""
+    }
   },
   "editorScript": "file:./build/index.js"
 }

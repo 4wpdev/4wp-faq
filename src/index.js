@@ -5,7 +5,13 @@ import { useDispatch, useSelect } from '@wordpress/data';
 import { Fragment, useMemo } from '@wordpress/element';
 import { addFilter } from '@wordpress/hooks';
 import { createHigherOrderComponent } from '@wordpress/compose';
-import { PanelBody, TextareaControl, Notice } from '@wordpress/components';
+import {
+	PanelBody,
+	TextareaControl,
+	Notice,
+	SelectControl,
+} from '@wordpress/components';
+import { __ } from '@wordpress/i18n';
 import { serialize } from '@wordpress/blocks';
 
 const extractTextFromBlocks = ( blocks ) => {
@@ -72,16 +78,37 @@ const collectFaqItems = ( blocks ) => {
 	return items;
 };
 
+const getGlobalJsonLd = () =>
+	typeof window !== 'undefined' &&
+	window.forwpFaqEditor &&
+	window.forwpFaqEditor.globalJsonLdEnabled;
+
+const blockOutputsJsonLd = ( jsonLdAttr ) => {
+	const mode = jsonLdAttr || '';
+	if ( mode === 'enable' ) {
+		return true;
+	}
+	if ( mode === 'disable' ) {
+		return false;
+	}
+	return !! getGlobalJsonLd();
+};
+
 registerBlockType( 'forwp/faq', {
 	edit: ( props ) => {
+		const { attributes, setAttributes } = props;
 		const { getBlock } = useSelect( ( select ) => ( {
 			getBlock: select( 'core/block-editor' ).getBlock,
 		} ), [ props.clientId ] );
 
 		const currentBlock = getBlock( props.clientId );
 		const items = useMemo( () => collectFaqItems( currentBlock?.innerBlocks || [] ), [ currentBlock ] );
+		const jsonLdMode = attributes.jsonLd || '';
+		const outputsJsonLd = blockOutputsJsonLd( jsonLdMode );
+		const globalOn = getGlobalJsonLd();
+
 		const schema = useMemo( () => {
-			if ( ! items.length ) {
+			if ( ! items.length || ! outputsJsonLd ) {
 				return '';
 			}
 			return JSON.stringify(
@@ -100,20 +127,69 @@ registerBlockType( 'forwp/faq', {
 				null,
 				2
 			);
-		}, [ items ] );
+		}, [ items, outputsJsonLd ] );
+
+		const jsonLdHelp = globalOn
+			? __(
+					'Site-wide JSON-LD is on. Choose “Off for this block” to exclude this FAQ from structured data.',
+					'4wp-faq'
+			  )
+			: __(
+					'Site-wide JSON-LD is off. Choose “On for this block” to output FAQPage schema for this block only.',
+					'4wp-faq'
+			  );
 
 		return (
 			<Fragment>
 				<InspectorControls>
-					<PanelBody title="FAQ Info" initialOpen>
+					<PanelBody title={ __( 'SEO', '4wp-faq' ) } initialOpen>
+						<SelectControl
+							label={ __( 'JSON-LD on front end', '4wp-faq' ) }
+							help={ jsonLdHelp }
+							value={ jsonLdMode }
+							options={ [
+								{
+									label: globalOn
+										? __( 'Default (on — site setting)', '4wp-faq' )
+										: __( 'Default (off — site setting)', '4wp-faq' ),
+									value: '',
+								},
+								{
+									label: __( 'On for this block', '4wp-faq' ),
+									value: 'enable',
+								},
+								{
+									label: __( 'Off for this block', '4wp-faq' ),
+									value: 'disable',
+								},
+							] }
+							onChange={ ( value ) =>
+								setAttributes( { jsonLd: value || '' } )
+							}
+						/>
+					</PanelBody>
+					<PanelBody title={ __( 'FAQ preview', '4wp-faq' ) } initialOpen={ false }>
 						{ items.length === 0 ? (
 							<Notice status="warning" isDismissible={ false }>
-								Add accordion items to generate FAQ schema.
+								{ __(
+									'Add accordion items to generate FAQ schema.',
+									'4wp-faq'
+								) }
 							</Notice>
 						) : null }
-						<p>Items: { items.length }</p>
+						{ ! outputsJsonLd && items.length > 0 ? (
+							<Notice status="info" isDismissible={ false }>
+								{ __(
+									'JSON-LD is off for this block on the front end.',
+									'4wp-faq'
+								) }
+							</Notice>
+						) : null }
+						<p>
+							{ __( 'Items:', '4wp-faq' ) } { items.length }
+						</p>
 						<TextareaControl
-							label="Schema JSON-LD"
+							label={ __( 'Schema JSON-LD (preview)', '4wp-faq' ) }
 							value={ schema }
 							rows={ Math.min( 12, Math.max( 6, items.length * 2 ) ) }
 							readOnly

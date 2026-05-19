@@ -1,0 +1,22 @@
+# Development-only — omit from WordPress.org ZIP / Plugin Check release bundle.
+.git/
+.gitattributes
+.gitignore
+.distignore
+
+.editorconfig
+.phpcs.xml
+.phpcs.xml.dist
+.phpcs.cache
+
+package.json
+package-lock.json
+webpack.config.js
+src/
+node_modules/
+
+docs/
+README.md
+TEMP.md
+
+.cursor/

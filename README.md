@@ -1,64 +1,87 @@
 # 4WP FAQ
 
-**Not just another FAQ block. A smart wrapper that adds intelligence without breaking your design.**
+[![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![WordPress 6.0+](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg?style=flat-square)](https://wordpress.org/)
+[![PHP 7.4+](https://img.shields.io/badge/PHP-7.4%2B-777bb4.svg?style=flat-square)](https://www.php.net/)
 
-[View Documentation →](https://4wp.dev/plugin/4wp-faq/)
+**Not another FAQ block.** A smart wrapper around core **Accordion** that adds FAQPage JSON-LD, an optional question registry, and usage stats—without changing your front-end design or duplicating content.
 
-## Description
+A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)**
 
-4WP FAQ is a smart wrapper around WordPress core Accordion that adds intelligence without breaking design. It adds Schema JSON-LD, aggregation, and usage context while working on top of existing content with zero duplication.
+## Features
 
-### Key Features
+- **`forwp/faq` wrapper** — keeps your Accordion layout and theme styles
+- **FAQPage JSON-LD** — site-wide toggle in Settings; per-block override in the sidebar
+- **Convert to FAQ** — toolbar action on `core/accordion` / `core/accordion-item`
+- **Optional registry** — aggregated CPT + taxonomy (setup wizard), content scan, reuse stats
+- **Admin settings** — overview metrics, rescan, SEO toggle, reset setup (with safeguards)
 
-- **Smart Layer**: Adds JSON-LD, aggregation & context without touching design
-- **Single Source**: Real questions from actual content, zero duplication
-- **Scalable**: Reuse, analytics, tracking - built for growth
+Legacy **`core/details`** inside the wrapper is still supported for schema and scan.
 
-### What it is now
+## Block structure
 
-- Wrapper over core Accordion
-- Schema JSON-LD generation
-- Aggregates all FAQ blocks
+```
+forwp/faq                    ← 4WP FAQ wrapper
+└── core/accordion
+    └── core/accordion-item  ← one Q&A (JSON-LD + registry)
+        ├── heading
+        └── panel content
+```
 
-### What it gives today
+Details: [docs/BLOCKS.md](docs/BLOCKS.md).
 
-- Single base of real Q&A
-- Transparent usage map
-- Quick verification
+## How it works
 
-### Unlimited future
+1. Build or select a core **Accordion** (or item) in the editor.
+2. Click **Convert to FAQ** in the block toolbar.
+3. Under **FAQ → Settings**, turn on JSON-LD when you want structured data (off by default).
+4. Optionally run **setup** to enable the registry CPT (`faq` by default) and **Rescan** after content changes.
 
-- Question reuse system
-- Real usage statistics
-- Click/expansion tracking
+JSON-LD on the front end does **not** require the registry. The registry is for listing, reuse tracking, and future features.
 
-## Installation
+## Install
 
-1. Upload the plugin files to the `/wp-content/plugins/4wp-faq` directory, or install the plugin through the WordPress plugins screen directly.
-2. Activate the plugin through the 'Plugins' screen in WordPress.
-3. Use the 'Convert to FAQ' button in the block toolbar to wrap your Accordion blocks.
+| Source | Notes |
+|--------|--------|
+| **From GitHub** | Clone, build, activate (see below). |
+| **WordPress.org** | Coming with v1.0.0 review — listing copy in [`readme.txt`](readme.txt). |
 
-## Usage
-
-1. Add a core Accordion (or item) block
-2. Click 'Convert to FAQ' in the block toolbar
-3. Plugin wraps it in `forwp/faq` without changing appearance
-4. View Schema JSON-LD preview in the FAQ block inspector
+```bash
+git clone https://github.com/4wpdev/4wp-faq.git
+cd 4wp-faq
+npm install && npm run build
+# Copy or symlink into wp-content/plugins/4wp-faq and activate in wp-admin.
+```
 
 ## Requirements
 
-- WordPress 6.0 or higher
-- PHP 7.4 or higher
+- WordPress **6.0+** (Accordion blocks; tested up to **6.9**)
+- PHP **7.4+**
+
+## Links
+
+| | |
+|---|---|
+| Repository | [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq) |
+| Releases | [GitHub Releases](https://github.com/4wpdev/4wp-faq/releases) |
+| Block reference | [docs/BLOCKS.md](docs/BLOCKS.md) |
+| WordPress.org readme | [readme.txt](readme.txt) (Plugin Check / directory listing) |
+
+## For developers
+
+- **Namespace:** `ForWP\FAQ`
+- **Block:** `forwp/faq` · **Text domain:** `4wp-faq`
+- **REST:** `forwp-faq/v1` (settings, registry scan, setup)
+- **Build:** `npm run build` → `build/` (block editor + admin React screens)
+
+```bash
+npm install
+npm run build   # production
+npm run start   # watch
+```
+
+Release ZIPs should include `build/` and PHP only—see [`.distignore`](.distignore) (excludes `src/`, `node_modules/`, etc.).
 
 ## License
 
-MIT License - see LICENSE file for details.
-
-## Author
-
-[4WP Team](https://4wp.dev)
-
-## Documentation
-
-For detailed documentation, examples, and FAQs, visit: [https://4wp.dev/plugin/4wp-faq/](https://4wp.dev/plugin/4wp-faq/)
-
+GPL v2 or later. See [readme.txt](readme.txt) and the plugin header in [`4wp-faq.php`](4wp-faq.php).

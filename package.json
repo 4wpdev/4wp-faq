@@ -1,6 +1,6 @@
 {
   "name": "forwp-faq",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "build": "wp-scripts build",
@@ -9,7 +9,8 @@
     "lint:js": "wp-scripts lint-js"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^27.0.0"
+    "@wordpress/scripts": "^27.0.0",
+    "sass": "^1.77.0"
   }
 }
 
