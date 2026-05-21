@@ -1225,8 +1225,7 @@ class Plugin {
 								],
 							],
 						],
-					],
-					JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+					]
 				);
 			}
 			$schema_id = 'forwp-faq-schema-' . (int) $post->ID;

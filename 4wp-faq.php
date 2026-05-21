@@ -6,7 +6,7 @@
  * Version:           1.0.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
- * Tested up to:      6.9
+ * Tested up to:      7.0
  * Author:            4WP Team
  * Author URI:        https://4wp.dev
  * License:           GPL v2 or later
