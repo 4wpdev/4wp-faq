@@ -14,7 +14,19 @@ Smart FAQ wrapper for core Accordion: JSON-LD, optional registry, and per-block 
 
 4WP FAQ is a smart wrapper around WordPress core **Accordion** blocks. It adds FAQPage JSON-LD, an optional aggregated FAQ registry, and usage context while keeping your front-end design intact.
 
-Source and releases: [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)
+A plugin by [4wp.dev](https://4wp.dev/). **4WP** is our project brand; this plugin is not affiliated with, endorsed, or sponsored by WordPress.
+
+Source code and releases: [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)
+
+= Development =
+
+JavaScript and CSS are built with `@wordpress/scripts`. Human-readable source (`src/`, `webpack.config.js`, `package.json`) is in the public GitHub repository above — not in the distributed plugin ZIP.
+
+From a clone of the repository:
+
+1. `cd` into the plugin directory
+2. `npm install`
+3. `npm run build` — compiles block, admin, and setup apps into `build/`
 
 = Key features =
 

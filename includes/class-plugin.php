@@ -24,6 +24,7 @@ class Plugin {
 
 		if ( is_admin() ) {
 			Admin_Settings::init();
+			add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_registry_admin_assets' ] );
 			add_action( 'admin_post_forwp_faq_scan', [ __CLASS__, 'handle_manual_scan' ] );
 			add_action( 'admin_notices', [ __CLASS__, 'render_setup_success_notice' ] );
 		}
@@ -62,6 +63,35 @@ class Plugin {
 		self::register_post_meta();
 		flush_rewrite_rules();
 		self::schedule_scan();
+	}
+
+	/**
+	 * Registry CPT edit screen: enqueue copy-button script (no inline &lt;script&gt;).
+	 *
+	 * @param string $hook_suffix Current admin page hook.
+	 */
+	public static function enqueue_registry_admin_assets( $hook_suffix ) {
+		if ( ! Settings::is_setup_complete() ) {
+			return;
+		}
+
+		$post_type = Settings::get_post_type();
+		if ( 'post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix ) {
+			return;
+		}
+
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || $post_type !== $screen->post_type ) {
+			return;
+		}
+
+		wp_enqueue_script(
+			'forwp-faq-registry-copy',
+			FORWP_FAQ_PLUGIN_URL . 'assets/admin-registry-copy.js',
+			[],
+			FORWP_FAQ_VERSION,
+			true
+		);
 	}
 
 	/**
@@ -358,10 +388,9 @@ class Plugin {
 			'mainEntity' => $entities,
 		];
 
-		printf(
-			'<script type="application/ld+json">%s</script>',
-			wp_json_encode( $schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES )
-		);
+		echo '<script type="application/ld+json">';
+		echo wp_json_encode( $schema );
+		echo '</script>';
 	}
 
 	/**
@@ -647,12 +676,10 @@ class Plugin {
 		self::scan_all_posts();
 
 		$redirect = '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked via check_admin_referer above.
 		if ( ! empty( $_POST['forwp_faq_redirect'] ) ) {
-			$redirect = wp_validate_redirect(
-				wp_unslash( $_POST['forwp_faq_redirect'] ), // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-				''
-			);
+			$redirect_raw = sanitize_text_field( wp_unslash( $_POST['forwp_faq_redirect'] ) );
+			$redirect     = wp_validate_redirect( $redirect_raw, '' );
 		}
 
 		if ( ! $redirect ) {
@@ -1215,7 +1242,7 @@ class Plugin {
 			<?php else : ?>
 				<textarea id="<?php echo esc_attr( $schema_id ); ?>" class="widefat" rows="8" readonly><?php echo esc_textarea( $schema ); ?></textarea>
 				<p>
-					<button type="button" class="button" data-copy-target="<?php echo esc_attr( $schema_id ); ?>">
+					<button type="button" class="button" data-forwp-faq-copy-target="<?php echo esc_attr( $schema_id ); ?>">
 						<?php esc_html_e( 'Copy JSON', '4wp-faq' ); ?>
 					</button>
 					<a class="button button-secondary" href="<?php echo esc_url( $scan_url ); ?>">
@@ -1224,28 +1251,6 @@ class Plugin {
 				</p>
 			<?php endif; ?>
 		</div>
-		<script>
-			(function () {
-				var root = document.currentScript && document.currentScript.parentNode;
-				if (!root) return;
-				var button = root.querySelector('button[data-copy-target]');
-				if (!button) return;
-				button.addEventListener('click', function () {
-					var targetId = button.getAttribute('data-copy-target');
-					var textarea = document.getElementById(targetId);
-					if (!textarea) return;
-					textarea.focus();
-					textarea.select();
-					try {
-						document.execCommand('copy');
-					} catch (e) {
-						if (navigator.clipboard && navigator.clipboard.writeText) {
-							navigator.clipboard.writeText(textarea.value);
-						}
-					}
-				});
-			})();
-		</script>
 		<?php
 	}
 

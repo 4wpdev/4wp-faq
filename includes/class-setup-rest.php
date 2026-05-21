@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * REST endpoints for setup wizard (React admin UI).
+ *
+ * All routes require manage_options via permission_callback.
  */
 class Setup_Rest {
 	/**

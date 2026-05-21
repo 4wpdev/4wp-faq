@@ -7,6 +7,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * REST API for the FAQ admin settings app.
+ *
+ * All routes under forwp-faq/v1 require manage_options via permission_callback.
  */
 class Admin_Rest {
 	/**

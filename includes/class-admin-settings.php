@@ -72,8 +72,7 @@ class Admin_Settings {
 		echo '<div class="wrap forwp-faq-admin-shell">';
 		echo '<h1 class="forwp-faq-admin-heading">';
 		echo '<span class="forwp-faq-admin-heading__icon" aria-hidden="true">';
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG.
-		echo self::heading_svg();
+		echo wp_kses( self::heading_svg(), self::heading_svg_allowed_html() );
 		echo '</span>';
 		echo '<span class="forwp-faq-admin-heading__text">';
 		echo esc_html__( '4WP FAQ', '4wp-faq' );
@@ -132,6 +131,28 @@ class Admin_Settings {
 				'nonce'    => wp_create_nonce( 'wp_rest' ),
 			]
 		);
+	}
+
+	/**
+	 * Allowed tags for the static admin heading icon SVG.
+	 *
+	 * @return array<string, array<string, bool>>
+	 */
+	private static function heading_svg_allowed_html() {
+		return [
+			'svg'  => [
+				'xmlns'       => true,
+				'viewbox'     => true,
+				'width'       => true,
+				'height'      => true,
+				'fill'        => true,
+				'aria-hidden' => true,
+			],
+			'path' => [
+				'd'    => true,
+				'fill' => true,
+			],
+		];
 	}
 
 	/**
