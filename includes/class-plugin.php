@@ -1,6 +1,8 @@
 <?php
 namespace ForWP\FAQ;
 
+use ForWP\FAQ\Integrations\Polylang;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -16,7 +18,9 @@ class Plugin {
 		Setup_Wizard::init();
 		Setup_Rest::init();
 		Admin_Rest::init();
+		Editor_Rest::init();
 		Dashboard_Setup::init();
+		Polylang::init();
 
 		add_action( 'init', [ __CLASS__, 'register_block' ] );
 		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'enqueue_block_editor_assets' ] );
@@ -144,7 +148,9 @@ class Plugin {
 			$block->editor_script,
 			'forwpFaqEditor',
 			[
-				'globalJsonLdEnabled' => Settings::is_output_json_ld_enabled(),
+				'globalJsonLdEnabled'   => Settings::is_output_json_ld_enabled(),
+				'registrySetupComplete' => Settings::is_setup_complete(),
+				'categoriesPath'        => '/forwp-faq/v1/editor/categories',
 			]
 		);
 	}
@@ -725,7 +731,11 @@ class Plugin {
 			$block_name = $block['blockName'] ?? '';
 
 			if ( self::BLOCK_NAME === $block_name ) {
-				$items = array_merge( $items, self::extract_items_from_blocks( $block['innerBlocks'] ?? [], $post ) );
+				$category_term_ids = Category_Resolver::resolve_from_block_attrs( $block['attrs'] ?? [], (int) $post->ID );
+				$items             = array_merge(
+					$items,
+					self::extract_items_from_blocks( $block['innerBlocks'] ?? [], $post, $category_term_ids )
+				);
 			}
 
 			if ( ! empty( $block['innerBlocks'] ) ) {
@@ -739,24 +749,25 @@ class Plugin {
 	/**
 	 * Extract FAQ items from accordion-style blocks.
 	 *
-	 * @param array    $blocks Parsed blocks.
-	 * @param \WP_Post $post   Post object.
+	 * @param array    $blocks            Parsed blocks.
+	 * @param \WP_Post $post              Post object.
+	 * @param int[]    $category_term_ids Category term IDs from the FAQ wrapper block.
 	 * @return array<int, array<string, mixed>>
 	 */
-	private static function extract_items_from_blocks( $blocks, $post ) {
+	private static function extract_items_from_blocks( $blocks, $post, $category_term_ids = [] ) {
 		$items = [];
 		foreach ( $blocks as $block ) {
 			$block_name = $block['blockName'] ?? '';
 
 			if ( self::is_faq_item_block( $block_name ) ) {
-				$item = self::build_item_from_block( $block, $post );
+				$item = self::build_item_from_block( $block, $post, $category_term_ids );
 				if ( $item ) {
 					$items[] = $item;
 				}
 			}
 
 			if ( ! empty( $block['innerBlocks'] ) ) {
-				$items = array_merge( $items, self::extract_items_from_blocks( $block['innerBlocks'], $post ) );
+				$items = array_merge( $items, self::extract_items_from_blocks( $block['innerBlocks'], $post, $category_term_ids ) );
 			}
 		}
 
@@ -784,11 +795,12 @@ class Plugin {
 	/**
 	 * Build a FAQ item from a block.
 	 *
-	 * @param array    $block Block data.
-	 * @param \WP_Post $post  Post object.
+	 * @param array    $block             Block data.
+	 * @param \WP_Post $post              Post object.
+	 * @param int[]    $category_term_ids Category term IDs from the FAQ wrapper block.
 	 * @return array<string, mixed>|null
 	 */
-	private static function build_item_from_block( $block, $post ) {
+	private static function build_item_from_block( $block, $post, $category_term_ids = [] ) {
 		$texts        = self::extract_item_texts( $block );
 		$question     = $texts['question'];
 		$answer       = $texts['answer'];
@@ -799,14 +811,16 @@ class Plugin {
 		}
 
 		return [
-			'title'       => $question,
-			'question'    => $question,
-			'answer'      => $answer,
-			'answer_html' => $answer_html,
-			'post_id'     => $post->ID,
-			'post_type'   => $post->post_type,
-			'permalink'   => get_permalink( $post ),
-			'post_title'  => get_the_title( $post ),
+			'title'             => $question,
+			'question'          => $question,
+			'answer'            => $answer,
+			'answer_html'       => $answer_html,
+			'post_id'           => $post->ID,
+			'post_type'         => $post->post_type,
+			'permalink'         => get_permalink( $post ),
+			'post_title'        => get_the_title( $post ),
+			'source_lang'       => Polylang::get_post_language( (int) $post->ID ),
+			'category_term_ids' => array_values( array_map( 'intval', (array) $category_term_ids ) ),
 		];
 	}
 
@@ -969,20 +983,27 @@ class Plugin {
 
 			if ( ! isset( $aggregated[ $key ] ) ) {
 				$aggregated[ $key ] = [
-					'question'           => $item['question'],
-					'answers'            => [],
-					'answers_html'       => [],
-					'source_titles'      => [],
-					'used_in_posts'      => [],
-					'used_in_post_types' => [],
+					'question'            => $item['question'],
+					'answers'             => [],
+					'answers_html'        => [],
+					'source_titles'       => [],
+					'used_in_posts'       => [],
+					'used_in_post_types'  => [],
+					'category_term_ids'   => [],
 				];
 			}
 
-			$aggregated[ $key ]['answers'][]            = $item['answer'];
-			$aggregated[ $key ]['answers_html'][]       = $item['answer_html'];
-			$aggregated[ $key ]['source_titles'][]      = $item['post_title'];
+			$aggregated[ $key ]['answers'][]             = $item['answer'];
+			$aggregated[ $key ]['answers_html'][]        = $item['answer_html'];
+			$aggregated[ $key ]['source_titles'][]     = $item['post_title'];
 			$aggregated[ $key ]['used_in_posts'][]      = $item['post_id'];
 			$aggregated[ $key ]['used_in_post_types'][] = $item['post_type'];
+			if ( ! empty( $item['category_term_ids'] ) && is_array( $item['category_term_ids'] ) ) {
+				$aggregated[ $key ]['category_term_ids'] = array_merge(
+					$aggregated[ $key ]['category_term_ids'],
+					$item['category_term_ids']
+				);
+			}
 		}
 
 		foreach ( $aggregated as $key => $data ) {
@@ -991,10 +1012,48 @@ class Plugin {
 			$aggregated[ $key ]['source_titles']      = self::unique_values( $data['source_titles'] );
 			$aggregated[ $key ]['used_in_posts']      = self::unique_values( $data['used_in_posts'] );
 			$aggregated[ $key ]['used_in_post_types'] = self::unique_values( $data['used_in_post_types'] );
+			$aggregated[ $key ]['category_term_ids']  = self::unique_values( $data['category_term_ids'] ?? [] );
 			$aggregated[ $key ]['count_usage']        = count( $aggregated[ $key ]['used_in_posts'] );
 		}
 
 		return $aggregated;
+	}
+
+	/**
+	 * Assign FAQ categories to a registry post from aggregated scan data.
+	 *
+	 * @param int                  $post_id Registry post ID.
+	 * @param array<string, mixed> $data    Aggregated FAQ data.
+	 */
+	private static function sync_registry_categories( $post_id, $data ) {
+		$taxonomy = Settings::get_taxonomy();
+		if ( ! taxonomy_exists( $taxonomy ) ) {
+			return;
+		}
+
+		$term_ids = [];
+		if ( ! empty( $data['category_term_ids'] ) && is_array( $data['category_term_ids'] ) ) {
+			$term_ids = array_values( array_unique( array_filter( array_map( 'intval', $data['category_term_ids'] ) ) ) );
+		}
+
+		/**
+		 * Filter category term IDs before they are saved on a registry post.
+		 *
+		 * @param int[]                $term_ids Term IDs.
+		 * @param int                  $post_id  Registry post ID.
+		 * @param array<string, mixed> $data     Aggregated FAQ data.
+		 */
+		$term_ids = apply_filters( 'forwp_faq_registry_term_ids', $term_ids, $post_id, $data );
+
+		wp_set_object_terms( $post_id, $term_ids, $taxonomy, false );
+
+		if ( Polylang::is_active() && ! empty( $data['used_in_posts'] ) && is_array( $data['used_in_posts'] ) ) {
+			$source_post_id = (int) $data['used_in_posts'][0];
+			$lang           = Polylang::get_post_language( $source_post_id );
+			if ( '' !== $lang ) {
+				Polylang::set_post_language( $post_id, $lang );
+			}
+		}
 	}
 
 	/**
@@ -1049,6 +1108,8 @@ class Plugin {
 			update_post_meta( $post_id, 'used_in_posts', $data['used_in_posts'] );
 			update_post_meta( $post_id, 'used_in_post_types', $data['used_in_post_types'] );
 			update_post_meta( $post_id, 'count_usage', $data['count_usage'] );
+
+			self::sync_registry_categories( $post_id, $data );
 
 			$handled_ids[] = $post_id;
 		}

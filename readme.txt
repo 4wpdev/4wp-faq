@@ -4,7 +4,7 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 2.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -33,8 +33,11 @@ From a clone of the repository:
 * Wrap **Accordion** / **Accordion Item** (legacy **Details** supported)
 * **FAQPage JSON-LD** — site-wide toggle plus per-block override
 * Optional **FAQ registry** CPT with content scan and usage stats
+* **FAQ categories** — create in admin, pick per block, or auto-create on scan from the page
+* **Polylang** — registry categories respect the language of the page where the FAQ block lives
 * Setup wizard for registry post type and taxonomy slugs
 * **Convert to FAQ** toolbar action on Accordion blocks
+* Default **Accordion** template when inserting the FAQ block; **Add FAQ item** in the editor
 
 = How it works =
 
@@ -73,10 +76,20 @@ You can change registry slugs in the wizard again, but FAQ **categories are remo
 
 == Changelog ==
 
+= 2.0.0 =
+* Registry categories: none, existing, or create new per FAQ block (applied on scan).
+* Categories can be managed in admin or derived from the pages where FAQ blocks are placed.
+* Polylang: language-aware FAQ categories during registry scan.
+* Block editor: default Accordion with one item on insert; **Add FAQ item** button.
+* WPML support planned for a future release.
+
 = 1.0.0 =
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.0.0 =
+Registry categories, Polylang-aware scan, and improved FAQ block insertion (default Accordion + Add FAQ item).
 
 = 1.0.0 =
 Initial release.

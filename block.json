@@ -15,6 +15,18 @@
     "jsonLd": {
       "type": "string",
       "default": ""
+    },
+    "categoryMode": {
+      "type": "string",
+      "default": "none"
+    },
+    "categoryTermId": {
+      "type": "number",
+      "default": 0
+    },
+    "categoryName": {
+      "type": "string",
+      "default": ""
     }
   },
   "editorScript": "file:./build/index.js"
