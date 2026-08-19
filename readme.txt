@@ -4,7 +4,7 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.0.0
+Stable tag: 2.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -76,6 +76,10 @@ You can change registry slugs in the wizard again, but FAQ **categories are remo
 
 == Changelog ==
 
+= 2.0.1 =
+* Fix: incomplete plugin uploads no longer white-screen the site — missing PHP files show an admin error and the plugin stops loading safely.
+* Deploy: ensure `includes/class-category-resolver.php` and other required files are present when updating from 2.0.0.
+
 = 2.0.0 =
 * Registry categories: none, existing, or create new per FAQ block (applied on scan).
 * Categories can be managed in admin or derived from the pages where FAQ blocks are placed.
@@ -87,6 +91,9 @@ You can change registry slugs in the wizard again, but FAQ **categories are remo
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.0.1 =
+Hotfix for incomplete updates: safe load when plugin files are missing. Re-upload the full 2.0.1 package if you saw a fatal error on 2.0.0.
 
 = 2.0.0 =
 Registry categories, Polylang-aware scan, and improved FAQ block insertion (default Accordion + Add FAQ item).
