@@ -21,6 +21,7 @@ function get_required_include_files(): array {
 		'includes/class-settings.php',
 		'includes/class-category-resolver.php',
 		'includes/integrations/class-polylang.php',
+		'includes/integrations/class-yoast.php',
 		'includes/class-editor-rest.php',
 		'includes/class-setup-wizard.php',
 		'includes/class-setup-rest.php',

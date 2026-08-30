@@ -76,6 +76,14 @@ You can change registry slugs in the wizard again, but FAQ **categories are remo
 
 == Changelog ==
 
+= 2.0.3 =
+* Fix: FAQPage JSON-LD uses `<summary>` text as `Question.name` for core Details blocks (no longer duplicates the answer).
+* Fix: FAQPage JSON-LD outputs in `<head>` for reliable detection by validators and crawlers.
+* Add: `@id` and `url` on FAQPage schema.
+
+= 2.0.2 =
+* Maintenance release.
+
 = 2.0.1 =
 * Fix: incomplete plugin uploads no longer white-screen the site — missing PHP files show an admin error and the plugin stops loading safely.
 * Deploy: ensure `includes/class-category-resolver.php` and other required files are present when updating from 2.0.0.
@@ -91,6 +99,9 @@ You can change registry slugs in the wizard again, but FAQ **categories are remo
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.0.3 =
+Fixes FAQPage schema for Details blocks and moves JSON-LD to the document head.
 
 = 2.0.1 =
 Hotfix for incomplete updates: safe load when plugin files are missing. Re-upload the full 2.0.1 package if you saw a fatal error on 2.0.0.

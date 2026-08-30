@@ -2,6 +2,7 @@
 namespace ForWP\FAQ;
 
 use ForWP\FAQ\Integrations\Polylang;
+use ForWP\FAQ\Integrations\Yoast;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -21,10 +22,11 @@ class Plugin {
 		Editor_Rest::init();
 		Dashboard_Setup::init();
 		Polylang::init();
+		Yoast::init();
 
 		add_action( 'init', [ __CLASS__, 'register_block' ] );
 		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'enqueue_block_editor_assets' ] );
-		add_action( 'wp_footer', [ __CLASS__, 'render_schema' ], 99 );
+		add_action( 'wp_head', [ __CLASS__, 'render_schema' ], 99 );
 
 		if ( is_admin() ) {
 			Admin_Settings::init();
@@ -370,6 +372,10 @@ class Plugin {
 	 * Output JSON-LD schema in the footer for posts containing the FAQ block.
 	 */
 	public static function render_schema() {
+		if ( Yoast::is_active() ) {
+			return;
+		}
+
 		if ( ! is_singular() ) {
 			return;
 		}
@@ -388,14 +394,22 @@ class Plugin {
 			return;
 		}
 
-		$schema = [
+		$entities = self::prepare_standalone_schema_entities( $entities );
+
+		$permalink = get_permalink( $post );
+		$schema    = [
 			'@context'   => 'https://schema.org',
 			'@type'      => 'FAQPage',
 			'mainEntity' => $entities,
 		];
 
-		echo '<script type="application/ld+json">';
-		echo wp_json_encode( $schema );
+		if ( is_string( $permalink ) && '' !== $permalink ) {
+			$schema['@id']  = $permalink . '#faq';
+			$schema['url']  = $permalink;
+		}
+
+		echo '<script type="application/ld+json" class="forwp-faq-schema">';
+		echo wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
 		echo '</script>';
 	}
 
@@ -815,6 +829,7 @@ class Plugin {
 			'question'          => $question,
 			'answer'            => $answer,
 			'answer_html'       => $answer_html,
+			'anchor'            => self::extract_block_anchor( $block ),
 			'post_id'           => $post->ID,
 			'post_type'         => $post->post_type,
 			'permalink'         => get_permalink( $post ),
@@ -822,6 +837,47 @@ class Plugin {
 			'source_lang'       => Polylang::get_post_language( (int) $post->ID ),
 			'category_term_ids' => array_values( array_map( 'intval', (array) $category_term_ids ) ),
 		];
+	}
+
+	/**
+	 * Extract a stable HTML anchor for a FAQ item block.
+	 *
+	 * @param array $block Block data.
+	 * @return string
+	 */
+	private static function extract_block_anchor( $block ) {
+		$attrs = $block['attrs'] ?? [];
+
+		if ( ! empty( $attrs['anchor'] ) ) {
+			return sanitize_title( (string) $attrs['anchor'] );
+		}
+
+		if ( ! empty( $block['innerHTML'] ) && preg_match( '/<details[^>]*\sid=["\']([^"\']+)["\']/i', (string) $block['innerHTML'], $matches ) ) {
+			return sanitize_title( $matches[1] );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Remove internal entity metadata before standalone JSON-LD output.
+	 *
+	 * @param array<int, array<string, mixed>> $entities Schema entities.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function prepare_standalone_schema_entities( $entities ) {
+		$prepared = [];
+
+		foreach ( $entities as $entity ) {
+			if ( ! is_array( $entity ) ) {
+				continue;
+			}
+
+			unset( $entity['anchor'] );
+			$prepared[] = $entity;
+		}
+
+		return $prepared;
 	}
 
 	/**
@@ -839,7 +895,56 @@ class Plugin {
 			}
 		}
 
+		$block_name = $block['blockName'] ?? '';
+		if ( self::is_details_block( $block_name ) && ! empty( $block['innerHTML'] ) ) {
+			$summary = self::extract_summary_from_html( (string) $block['innerHTML'] );
+			if ( '' !== $summary ) {
+				return $summary;
+			}
+		}
+
 		return '';
+	}
+
+	/**
+	 * Whether a block name represents a core Details FAQ item.
+	 *
+	 * @param string $block_name Block name.
+	 * @return bool
+	 */
+	private static function is_details_block( $block_name ) {
+		if ( ! is_string( $block_name ) || '' === $block_name ) {
+			return false;
+		}
+
+		return 'core/details' === $block_name || false !== strpos( $block_name, '/details' );
+	}
+
+	/**
+	 * Parse question text from a Details block summary element.
+	 *
+	 * @param string $html Details innerHTML.
+	 * @return string
+	 */
+	private static function extract_summary_from_html( $html ) {
+		if ( ! preg_match( '/<summary[^>]*>(.*?)<\/summary>/is', $html, $matches ) ) {
+			return '';
+		}
+
+		return self::normalize_question_text( wp_strip_all_tags( $matches[1] ) );
+	}
+
+	/**
+	 * Strip Details wrapper markup so answer text excludes the question summary.
+	 *
+	 * @param string $html Details innerHTML.
+	 * @return string
+	 */
+	private static function strip_details_wrapper_html( $html ) {
+		$html = preg_replace( '/<summary[^>]*>.*?<\/summary>/is', '', $html );
+		$html = preg_replace( '/<\/?details[^>]*>/i', '', $html );
+
+		return trim( (string) $html );
 	}
 
 	/**
@@ -849,12 +954,15 @@ class Plugin {
 	 * @return array{question:string,answer:string,answer_html:string}
 	 */
 	private static function extract_item_texts( $block ) {
-		$question = self::extract_question( $block );
+		$block_name  = $block['blockName'] ?? '';
+		$is_details  = self::is_details_block( $block_name );
+		$question    = self::extract_question( $block );
 		$answer_text = '';
 		$answer_html = '';
 		$inner       = $block['innerBlocks'] ?? [];
 
-		if ( '' === $question && ! empty( $inner ) ) {
+		// Accordion-style: first inner block is the heading, rest is the answer.
+		if ( '' === $question && ! empty( $inner ) && ! $is_details ) {
 			$question = self::normalize_question_text( self::render_blocks_to_text( [ $inner[0] ] ) );
 			if ( count( $inner ) > 1 ) {
 				$answer_text = self::render_blocks_to_text( array_slice( $inner, 1 ) );
@@ -871,11 +979,19 @@ class Plugin {
 		}
 
 		if ( '' === $answer_text && ! empty( $block['innerHTML'] ) ) {
-			$answer_text = trim( wp_strip_all_tags( $block['innerHTML'] ) );
+			$html_for_answer = (string) $block['innerHTML'];
+			if ( $is_details ) {
+				$html_for_answer = self::strip_details_wrapper_html( $html_for_answer );
+			}
+			$answer_text = trim( wp_strip_all_tags( $html_for_answer ) );
 		}
 
 		if ( '' === $answer_html && ! empty( $block['innerHTML'] ) ) {
-			$answer_html = trim( (string) $block['innerHTML'] );
+			$html_for_answer = (string) $block['innerHTML'];
+			if ( $is_details ) {
+				$html_for_answer = self::strip_details_wrapper_html( $html_for_answer );
+			}
+			$answer_html = trim( $html_for_answer );
 		}
 
 		return [
@@ -958,6 +1074,7 @@ class Plugin {
 					'@type' => 'Answer',
 					'text'  => $item['answer'],
 				],
+				'anchor'         => isset( $item['anchor'] ) ? (string) $item['anchor'] : '',
 			];
 
 			$seen[ $key ] = true;
