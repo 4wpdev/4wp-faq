@@ -1,0 +1,53 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "forwp/faq-list",
+	"title": "4WP FAQ List",
+	"category": "widgets",
+	"icon": "list-view",
+	"description": "Registry FAQ list: grouped by category or a single list, with include/exclude.",
+	"keywords": ["faq", "query", "glossary", "4wp"],
+	"textdomain": "4wp-faq",
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"],
+		"className": true,
+		"interactivity": true
+	},
+	"attributes": {
+		"layout": {
+			"type": "string",
+			"default": "grouped"
+		},
+		"includeTermIds": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "number"
+			}
+		},
+		"excludeTermIds": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "number"
+			}
+		},
+		"cardDisplayMode": {
+			"type": "string",
+			"default": "accordion"
+		},
+		"cardShowSources": {
+			"type": "boolean",
+			"default": false
+		},
+		"cardSourcesLabel": {
+			"type": "string",
+			"default": "Used in"
+		},
+		"cardShowPostType": {
+			"type": "boolean",
+			"default": false
+		}
+	}
+}

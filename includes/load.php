@@ -19,6 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 function get_required_include_files(): array {
 	return [
 		'includes/class-settings.php',
+		'includes/class-registry-content.php',
+		'includes/class-faq-filter.php',
+		'includes/class-display-blocks.php',
 		'includes/class-category-resolver.php',
 		'includes/integrations/class-polylang.php',
 		'includes/integrations/class-yoast.php',

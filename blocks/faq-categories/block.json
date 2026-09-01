@@ -1,0 +1,57 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "forwp/faq-categories",
+	"title": "4WP FAQ Categories",
+	"category": "widgets",
+	"icon": "category",
+	"description": "FAQ category navigation: vertical or horizontal. Filters 4WP FAQ List via the Interactivity API.",
+	"keywords": ["faq", "categories", "navigation", "4wp"],
+	"textdomain": "4wp-faq",
+	"supports": {
+		"html": false,
+		"align": ["wide", "full"],
+		"className": true,
+		"interactivity": true
+	},
+	"attributes": {
+		"orientation": {
+			"type": "string",
+			"default": "vertical"
+		},
+		"label": {
+			"type": "string",
+			"default": "Categories"
+		},
+		"showAll": {
+			"type": "boolean",
+			"default": true
+		},
+		"allLabel": {
+			"type": "string",
+			"default": "All categories"
+		},
+		"showCount": {
+			"type": "boolean",
+			"default": true
+		},
+		"seoUrls": {
+			"type": "boolean",
+			"default": false
+		},
+		"includeTermIds": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "number"
+			}
+		},
+		"excludeTermIds": {
+			"type": "array",
+			"default": [],
+			"items": {
+				"type": "number"
+			}
+		}
+	}
+}

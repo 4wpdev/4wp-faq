@@ -1,0 +1,37 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "forwp/faq-card",
+	"title": "4WP FAQ Card",
+	"category": "widgets",
+	"icon": "editor-help",
+	"description": "Single FAQ registry card: accordion or heading plus description, optional source links.",
+	"keywords": ["faq", "accordion", "card", "4wp"],
+	"textdomain": "4wp-faq",
+	"parent": ["forwp/faq-list"],
+	"usesContext": ["postId", "postType"],
+	"supports": {
+		"html": false,
+		"className": true,
+		"inserter": false,
+		"interactivity": true
+	},
+	"attributes": {
+		"displayMode": {
+			"type": "string",
+			"default": "accordion"
+		},
+		"showSources": {
+			"type": "boolean",
+			"default": false
+		},
+		"sourcesLabel": {
+			"type": "string",
+			"default": "Used in"
+		},
+		"showPostType": {
+			"type": "boolean",
+			"default": false
+		}
+	}
+}

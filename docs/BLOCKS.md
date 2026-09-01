@@ -46,6 +46,24 @@ Still supported for schema and scan. Prefer **Accordion + Accordion Item** for n
 - `core/accordion` — container only; items are **`core/accordion-item`** children.
 - `forwp/faq` — wrapper only; no Q&A text of its own.
 
+## Display blocks (registry hub)
+
+These are **not** wrappers around Accordion. After registry setup they query the FAQ CPT and taxonomy.
+
+```
+forwp/faq-categories
+forwp/faq-list
+└── forwp/faq-card
+```
+
+| Block | Name | Notes |
+|---|---|---|
+| 4WP FAQ List | `forwp/faq-list` | Grouped or flat. Include/exclude are **shared** with Categories on the same page. |
+| 4WP FAQ Card | `forwp/faq-card` | Parent: List only. Accordion or heading; optional sources. |
+| 4WP FAQ Categories | `forwp/faq-categories` | Nav + Interactivity filter. **All categories** = full synced list (editable label). |
+
+PHP: `includes/class-display-blocks.php`, `includes/class-registry-content.php`, `includes/class-faq-filter.php`. Editor: `src/faq-list/`, `src/faq-card/`, `src/faq-categories/`, `src/display/sync-filters.js`. Front-end store: `assets/faq-view.js`.
+
 ## Related code
 
 - Editor transforms & “Convert to FAQ”: `src/index.js`

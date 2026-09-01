@@ -23,6 +23,7 @@ class Plugin {
 		Dashboard_Setup::init();
 		Polylang::init();
 		Yoast::init();
+		Display_Blocks::init();
 
 		add_action( 'init', [ __CLASS__, 'register_block' ] );
 		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'enqueue_block_editor_assets' ] );

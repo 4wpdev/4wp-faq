@@ -1,0 +1,70 @@
+.wp-block-forwp-faq-categories,
+.forwp-faq-categories {
+	margin: 0;
+}
+
+.forwp-faq-categories__label {
+	margin: 0 0 0.75rem;
+	font-size: 0.7rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	opacity: 0.7;
+}
+
+.forwp-faq-categories__list {
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.forwp-faq-categories.is-orientation-horizontal .forwp-faq-categories__list {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 0.35rem;
+}
+
+.forwp-faq-categories__item {
+	margin: 0;
+}
+
+.forwp-faq-categories__link {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.55rem 0;
+	text-decoration: none;
+	color: inherit;
+}
+
+.forwp-faq-categories.is-orientation-horizontal .forwp-faq-categories__link {
+	padding: 0.4rem 0.75rem;
+	border: 1px solid currentColor;
+}
+
+.forwp-faq-categories__item.is-active .forwp-faq-categories__link,
+.forwp-faq-categories__link:hover,
+.forwp-faq-categories__link:focus-visible {
+	font-weight: 650;
+	outline: none;
+}
+
+.forwp-faq-categories__count {
+	font-size: 0.75rem;
+	opacity: 0.65;
+}
+
+.forwp-faq-categories__empty {
+	margin: 0;
+	opacity: 0.75;
+}
+
+.forwp-faq-categories-editor__help {
+	margin: 0.25rem 0 1rem;
+	font-size: 0.8125rem;
+	opacity: 0.75;
+}

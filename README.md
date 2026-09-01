@@ -14,11 +14,14 @@ A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq]
 - **FAQPage JSON-LD** — site-wide toggle in Settings; per-block override in the sidebar
 - **Convert to FAQ** — toolbar action on `core/accordion` / `core/accordion-item`
 - **Optional registry** — aggregated CPT + taxonomy (setup wizard), content scan, reuse stats
+- **FSE display blocks** — glossary-style list, cards, and category nav from the registry
 - **Admin settings** — overview metrics, rescan, SEO toggle, reset setup (with safeguards)
 
 Legacy **`core/details`** inside the wrapper is still supported for schema and scan.
 
 ## Block structure
+
+**In-place FAQ (schema + scan):**
 
 ```
 forwp/faq                    ← 4WP FAQ wrapper
@@ -28,7 +31,58 @@ forwp/faq                    ← 4WP FAQ wrapper
         └── panel content
 ```
 
+**Registry hub (FSE, after setup + rescan):**
+
+```
+forwp/faq-categories         ← nav; filters the list (Interactivity API)
+forwp/faq-list               ← grouped or flat registry list
+└── forwp/faq-card           ← inner template (accordion or heading + answer)
+core/search                  ← optional; inspector “Filter 4WP FAQ List”
+```
+
 Details: [docs/BLOCKS.md](docs/BLOCKS.md).
+
+## Display blocks (registry)
+
+These blocks read the FAQ registry CPT, not the in-place Accordion. Typical layout: **4WP FAQ Categories** in a sidebar column, **4WP FAQ List** in the main column.
+
+| Block | Name | Role |
+|---|---|---|
+| **4WP FAQ List** | `forwp/faq-list` | Renders registry questions, grouped by category or as a single list. Include/exclude taxonomy terms. |
+| **4WP FAQ Card** | `forwp/faq-card` | Inner block of the List (`inserter: false`). Accordion or heading + description. Optional source links (“Used in”), optional post-type label. |
+| **4WP FAQ Categories** | `forwp/faq-categories` | Vertical or horizontal nav. Click a category to filter the List in place (Interactivity). |
+
+### Shared category filters
+
+List and Categories **share include/exclude**. They stay in sync even when they sit in different columns.
+
+- If the List includes two categories, the nav shows those two.
+- If the nav includes more, the List includes those too.
+- Empty include on one side inherits the other. Empty on both = all categories.
+- **All categories** in the nav (toggle + replaceable label, default “All categories”) shows the **full synced list**, not every FAQ on the site.
+
+On the front end, PHP also unions non-empty includes from both blocks in the same page/template so an older save (List = 2, nav = all) cannot list a category that was never queried.
+
+### Card options
+
+Set on the inner **4WP FAQ Card** (copied to the List for editor preview):
+
+- **Display** — accordion (`<details>`) or heading + body
+- **Show sources** — pages/posts that use the question
+- **Sources label** — placeholder, default `Used in` (empty hides the label)
+- **Show post type** — off by default; CPT name next to each source link
+
+### Categories nav
+
+- **Orientation** — vertical or horizontal
+- **Label** — heading above the links (default `Categories`)
+- **Show “All categories”** — on by default; label is editable
+- **Show counts** — term counts next to each link
+- **SEO-friendly category URLs** — off: filter in place, URL unchanged. On: one extra path segment after the current page (`/faq/term-slug/`)
+
+### Related Search
+
+On a core **Search** block: **4WP FAQ → Filter 4WP FAQ List**. The input filters visible cards via the Interactivity store (`forwp/faq`) and does not submit a search request.
 
 ## How it works
 
@@ -37,7 +91,7 @@ Details: [docs/BLOCKS.md](docs/BLOCKS.md).
 3. Under **FAQ → Settings**, turn on JSON-LD when you want structured data (off by default).
 4. Optionally run **setup** to enable the registry CPT (`faq` by default) and **Rescan** after content changes.
 
-JSON-LD on the front end does **not** require the registry. The registry is for listing, reuse tracking, and future features.
+JSON-LD on the front end does **not** require the registry. The registry is for listing, reuse tracking, and the display blocks above.
 
 ## Install
 
@@ -70,7 +124,7 @@ npm install && npm run build
 ## For developers
 
 - **Namespace:** `ForWP\FAQ`
-- **Block:** `forwp/faq` · **Text domain:** `4wp-faq`
+- **Blocks:** `forwp/faq`, `forwp/faq-list`, `forwp/faq-card`, `forwp/faq-categories` · **Text domain:** `4wp-faq`
 - **REST:** `forwp-faq/v1` (settings, registry scan, setup)
 - **Build:** `npm run build` → `build/` (block editor + admin React screens)
 

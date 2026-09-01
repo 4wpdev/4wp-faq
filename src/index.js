@@ -17,6 +17,7 @@ import {
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { serialize } from '@wordpress/blocks';
+import './search-binding';
 
 const extractTextFromBlocks = ( blocks ) => {
 	if ( ! blocks || ! blocks.length ) {

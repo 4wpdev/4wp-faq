@@ -1,0 +1,803 @@
+<?php
+/**
+ * FSE blocks: 4WP FAQ List, Card, and Categories.
+ *
+ * @package ForWP\FAQ
+ */
+
+namespace ForWP\FAQ;
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+/**
+ * Register and render registry display blocks.
+ */
+class Display_Blocks {
+	public const LIST_BLOCK       = 'forwp/faq-list';
+	public const CARD_BLOCK       = 'forwp/faq-card';
+	public const CATEGORIES_BLOCK = 'forwp/faq-categories';
+	public const STORE            = 'forwp/faq';
+
+	public const LIST_SCRIPT       = 'forwp-faq-list-editor';
+	public const CARD_SCRIPT       = 'forwp-faq-card-editor';
+	public const CATEGORIES_SCRIPT = 'forwp-faq-categories-editor';
+	public const VIEW_SCRIPT       = 'forwp-faq-view';
+	public const LIST_STYLE        = 'forwp-faq-list';
+	public const CARD_STYLE        = 'forwp-faq-card';
+	public const CATEGORIES_STYLE  = 'forwp-faq-categories';
+
+	/**
+	 * Hook registration.
+	 */
+	public static function init() {
+		Faq_Filter::init();
+		add_action( 'init', [ __CLASS__, 'register_blocks' ] );
+		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'localize_editor_scripts' ], 20 );
+		add_filter( 'render_block_core/search', [ __CLASS__, 'render_related_search' ], 10, 2 );
+	}
+
+	/**
+	 * Register block types and assets.
+	 */
+	public static function register_blocks() {
+		self::register_assets();
+
+		$blocks = [
+			'faq-list'       => [
+				'script' => self::LIST_SCRIPT,
+				'style'  => self::LIST_STYLE,
+				'render' => [ __CLASS__, 'render_list' ],
+			],
+			'faq-card'       => [
+				'script' => self::CARD_SCRIPT,
+				'style'  => self::CARD_STYLE,
+				'render' => [ __CLASS__, 'render_card' ],
+			],
+			'faq-categories' => [
+				'script' => self::CATEGORIES_SCRIPT,
+				'style'  => self::CATEGORIES_STYLE,
+				'render' => [ __CLASS__, 'render_categories' ],
+			],
+		];
+
+		foreach ( $blocks as $folder => $config ) {
+			$path = FORWP_FAQ_PLUGIN_DIR . 'blocks/' . $folder;
+			if ( ! is_readable( $path . '/block.json' ) ) {
+				continue;
+			}
+
+			register_block_type(
+				$path,
+				[
+					'editor_script'   => $config['script'],
+					'style'           => $config['style'],
+					'editor_style'    => $config['style'],
+					'render_callback' => $config['render'],
+				]
+			);
+		}
+	}
+
+	/**
+	 * Register built editor scripts, view script, and front-end styles.
+	 */
+	private static function register_assets() {
+		$scripts = [
+			self::LIST_SCRIPT       => 'faq-list',
+			self::CARD_SCRIPT       => 'faq-card',
+			self::CATEGORIES_SCRIPT => 'faq-categories',
+		];
+
+		foreach ( $scripts as $handle => $file ) {
+			$asset_file = FORWP_FAQ_PLUGIN_DIR . 'build/' . $file . '.asset.php';
+			if ( ! is_readable( $asset_file ) ) {
+				continue;
+			}
+
+			$asset = include $asset_file;
+			wp_register_script(
+				$handle,
+				FORWP_FAQ_PLUGIN_URL . 'build/' . $file . '.js',
+				isset( $asset['dependencies'] ) ? $asset['dependencies'] : [],
+				isset( $asset['version'] ) ? $asset['version'] : FORWP_FAQ_VERSION,
+				true
+			);
+		}
+
+		if ( function_exists( 'wp_register_script_module' ) ) {
+			$view_file = FORWP_FAQ_PLUGIN_DIR . 'assets/faq-view.js';
+			if ( is_readable( $view_file ) ) {
+				wp_register_script_module(
+					self::VIEW_SCRIPT,
+					FORWP_FAQ_PLUGIN_URL . 'assets/faq-view.js',
+					[
+						[
+							'id'     => '@wordpress/interactivity',
+							'import' => 'static',
+						],
+					],
+					(string) filemtime( $view_file )
+				);
+			}
+		}
+
+		$card_style        = FORWP_FAQ_PLUGIN_DIR . 'build/style-faq-card.css';
+		$list_style        = FORWP_FAQ_PLUGIN_DIR . 'build/style-faq-list.css';
+		$categories_style  = FORWP_FAQ_PLUGIN_DIR . 'build/style-faq-categories.css';
+
+		if ( is_readable( $card_style ) ) {
+			wp_register_style(
+				self::CARD_STYLE,
+				FORWP_FAQ_PLUGIN_URL . 'build/style-faq-card.css',
+				[],
+				(string) filemtime( $card_style )
+			);
+		}
+
+		if ( is_readable( $list_style ) ) {
+			wp_register_style(
+				self::LIST_STYLE,
+				FORWP_FAQ_PLUGIN_URL . 'build/style-faq-list.css',
+				is_readable( $card_style ) ? [ self::CARD_STYLE ] : [],
+				(string) filemtime( $list_style )
+			);
+		}
+
+		if ( is_readable( $categories_style ) ) {
+			wp_register_style(
+				self::CATEGORIES_STYLE,
+				FORWP_FAQ_PLUGIN_URL . 'build/style-faq-categories.css',
+				[],
+				(string) filemtime( $categories_style )
+			);
+		}
+	}
+
+	/**
+	 * Shared editor config for list/card/categories inspectors.
+	 */
+	public static function localize_editor_scripts() {
+		$config = [
+			'registrySetupComplete' => Settings::is_setup_complete(),
+			'postType'              => Settings::get_post_type(),
+			'taxonomy'              => Settings::get_taxonomy(),
+			'categoriesPath'        => '/forwp-faq/v1/editor/categories',
+		];
+
+		foreach ( [ self::LIST_SCRIPT, self::CARD_SCRIPT, self::CATEGORIES_SCRIPT ] as $handle ) {
+			if ( wp_script_is( $handle, 'registered' ) ) {
+				wp_localize_script( $handle, 'forwpFaqDisplay', $config );
+			}
+		}
+	}
+
+	/**
+	 * Bind a core Search block to the FAQ Interactivity store when opted in.
+	 *
+	 * @param string               $content    Block HTML.
+	 * @param array<string, mixed> $block      Parsed block.
+	 * @return string
+	 */
+	public static function render_related_search( $content, $block ) {
+		$attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
+		if ( empty( $attrs['forwpFaqFilter'] ) || ! is_string( $content ) || '' === $content ) {
+			return $content;
+		}
+
+		if ( ! class_exists( '\WP_HTML_Tag_Processor' ) ) {
+			return $content;
+		}
+
+		self::ensure_runtime();
+
+		$processor = new \WP_HTML_Tag_Processor( $content );
+		if ( $processor->next_tag( 'form' ) ) {
+			$processor->set_attribute( 'data-wp-interactive', self::STORE );
+			$processor->set_attribute( 'data-wp-on--submit', 'actions.preventSearchSubmit' );
+		}
+
+		$processor = new \WP_HTML_Tag_Processor( $processor->get_updated_html() );
+		if ( $processor->next_tag( 'input' ) ) {
+			$processor->set_attribute( 'data-wp-interactive', self::STORE );
+			$processor->set_attribute( 'data-wp-on--input', 'actions.setSearch' );
+		}
+
+		return $processor->get_updated_html();
+	}
+
+	/**
+	 * Render 4WP FAQ List.
+	 *
+	 * @param array     $attributes Block attributes.
+	 * @param string    $content    Inner content.
+	 * @param \WP_Block $block      Block instance.
+	 * @return string
+	 */
+	public static function render_list( $attributes, $content, $block ) {
+		unset( $content );
+
+		$layout           = isset( $attributes['layout'] ) ? sanitize_key( (string) $attributes['layout'] ) : 'grouped';
+		$filters          = self::resolve_shared_term_filters(
+			$attributes['includeTermIds'] ?? [],
+			$attributes['excludeTermIds'] ?? []
+		);
+		$include_term_ids = $filters['includeTermIds'];
+		$exclude_term_ids = $filters['excludeTermIds'];
+		$card_attrs       = self::resolve_card_attributes( $attributes, $block );
+		$active           = Faq_Filter::get_active_slug();
+
+		if ( 'flat' !== $layout ) {
+			$layout = 'grouped';
+		}
+
+		self::ensure_runtime();
+
+		$wrapper_attrs = [
+			'class'                => 'forwp-faq-list is-layout-' . $layout,
+			'data-wp-interactive'  => self::STORE,
+		];
+
+		$wrapper = get_block_wrapper_attributes( $wrapper_attrs );
+
+		if ( ! Settings::is_setup_complete() ) {
+			return sprintf(
+				'<div %s><p class="forwp-faq-list__empty">%s</p></div>',
+				$wrapper,
+				esc_html__( 'Complete 4WP FAQ registry setup to display this list.', '4wp-faq' )
+			);
+		}
+
+		$html = '<div ' . $wrapper . '>';
+
+		if ( 'flat' === $layout ) {
+			$posts = Registry_Content::get_flat_posts( $include_term_ids, $exclude_term_ids );
+			$html .= self::render_items( $posts, $card_attrs );
+		} else {
+			$groups = Registry_Content::get_grouped_posts( $include_term_ids, $exclude_term_ids );
+			if ( empty( $groups ) ) {
+				$html .= self::render_empty();
+			} else {
+				foreach ( $groups as $group ) {
+					$posts = isset( $group['posts'] ) && is_array( $group['posts'] ) ? $group['posts'] : [];
+					if ( empty( $posts ) ) {
+						continue;
+					}
+
+					$term  = $group['term'] ?? null;
+					$slug  = $term instanceof \WP_Term ? $term->slug : '';
+					$title = $term instanceof \WP_Term
+						? $term->name
+						: __( 'Uncategorized', '4wp-faq' );
+
+					$hidden = ( '' !== $active && $slug !== $active );
+
+					$html .= '<section class="forwp-faq-list__group"' . self::context_attr( [ 'slug' => $slug ] ) . ' data-wp-bind--hidden="!state.isGroupVisible"' . ( $hidden ? ' hidden' : '' ) . '>';
+					$html .= '<h2 class="forwp-faq-list__group-title">' . esc_html( $title ) . '</h2>';
+					$html .= self::render_items( $posts, $card_attrs );
+					$html .= '</section>';
+				}
+			}
+		}
+
+		$html .= '</div>';
+
+		return $html;
+	}
+
+	/**
+	 * Render 4WP FAQ Categories (sidebar / navigation).
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string
+	 */
+	public static function render_categories( $attributes ) {
+		$orientation      = isset( $attributes['orientation'] ) ? sanitize_key( (string) $attributes['orientation'] ) : 'vertical';
+		$show_all         = ! isset( $attributes['showAll'] ) || ! empty( $attributes['showAll'] );
+		$show_count       = ! isset( $attributes['showCount'] ) || ! empty( $attributes['showCount'] );
+		$seo_urls         = ! empty( $attributes['seoUrls'] );
+		$filters          = self::resolve_shared_term_filters(
+			$attributes['includeTermIds'] ?? [],
+			$attributes['excludeTermIds'] ?? []
+		);
+		$include_term_ids = $filters['includeTermIds'];
+		$exclude_term_ids = $filters['excludeTermIds'];
+		$all_label        = isset( $attributes['allLabel'] ) && is_string( $attributes['allLabel'] ) && '' !== $attributes['allLabel']
+			? $attributes['allLabel']
+			: __( 'All categories', '4wp-faq' );
+		$nav_label        = isset( $attributes['label'] ) && is_string( $attributes['label'] ) && '' !== $attributes['label']
+			? $attributes['label']
+			: __( 'Categories', '4wp-faq' );
+
+		if ( 'horizontal' !== $orientation ) {
+			$orientation = 'vertical';
+		}
+
+		self::ensure_runtime();
+
+		$wrapper = get_block_wrapper_attributes(
+			[
+				'class'               => 'forwp-faq-categories is-orientation-' . $orientation,
+				'data-wp-interactive' => self::STORE,
+			]
+		);
+
+		if ( ! Settings::is_setup_complete() ) {
+			return sprintf(
+				'<nav %s><p class="forwp-faq-categories__empty">%s</p></nav>',
+				$wrapper,
+				esc_html__( 'Complete 4WP FAQ registry setup to display categories.', '4wp-faq' )
+			);
+		}
+
+		$terms  = Registry_Content::get_nav_terms( $include_term_ids, $exclude_term_ids );
+		$active = Faq_Filter::get_active_slug();
+
+		$html  = '<nav ' . $wrapper . ' aria-label="' . esc_attr( $nav_label ) . '">';
+		$html .= '<p class="forwp-faq-categories__label">' . esc_html( $nav_label ) . '</p>';
+		$html .= '<ul class="forwp-faq-categories__list">';
+
+		if ( $show_all ) {
+			$all_url = Faq_Filter::get_category_url( '', $seo_urls );
+			$html   .= self::render_category_item( '', $all_label, $all_url, $seo_urls, $active, null );
+		}
+
+		foreach ( $terms as $term ) {
+			$url   = Faq_Filter::get_category_url( $term->slug, $seo_urls );
+			$count = $show_count ? (int) $term->count : null;
+			$html .= self::render_category_item( $term->slug, $term->name, $url, $seo_urls, $active, $count );
+		}
+
+		$html .= '</ul>';
+
+		if ( empty( $terms ) && ! $show_all ) {
+			$html .= '<p class="forwp-faq-categories__empty">' . esc_html__( 'No FAQ categories yet.', '4wp-faq' ) . '</p>';
+		}
+
+		$html .= '</nav>';
+
+		return $html;
+	}
+
+	/**
+	 * Union include/exclude from 4WP FAQ List and 4WP FAQ Categories in the same document.
+	 *
+	 * Empty include on one block inherits the sibling. Non-empty includes are unioned so the
+	 * nav never lists a category that was not queried, and the list includes every nav category.
+	 * Skipped in the editor REST renderer so live inspector attributes stay authoritative.
+	 *
+	 * @param mixed $own_include Own include term IDs.
+	 * @param mixed $own_exclude Own exclude term IDs.
+	 * @return array{includeTermIds: int[], excludeTermIds: int[]}
+	 */
+	private static function resolve_shared_term_filters( $own_include, $own_exclude ) {
+		$own = [
+			'includeTermIds' => Registry_Content::sanitize_term_ids( $own_include ),
+			'excludeTermIds' => Registry_Content::sanitize_term_ids( $own_exclude ),
+		];
+
+		if ( ! self::should_merge_document_filters() ) {
+			return $own;
+		}
+
+		static $cache = null;
+
+		if ( null === $cache ) {
+			$include_sets = [];
+			$exclude_ids  = [];
+			$found        = false;
+
+			foreach ( self::get_document_contents() as $content ) {
+				$before = count( $include_sets );
+				self::collect_filters_from_blocks( parse_blocks( $content ), $include_sets, $exclude_ids );
+				if ( count( $include_sets ) > $before ) {
+					$found = true;
+				}
+			}
+
+			if ( ! $found ) {
+				$cache = false;
+			} else {
+				$union = [];
+				foreach ( $include_sets as $set ) {
+					if ( empty( $set ) ) {
+						continue;
+					}
+					foreach ( $set as $id ) {
+						$union[] = (int) $id;
+					}
+				}
+
+				$cache = [
+					'includeTermIds' => array_values( array_unique( $union ) ),
+					'excludeTermIds' => array_values( array_unique( $exclude_ids ) ),
+				];
+			}
+		}
+
+		return false === $cache ? $own : $cache;
+	}
+
+	/**
+	 * Editor block-renderer REST requests send a single block; do not overlay saved siblings.
+	 *
+	 * @return bool
+	 */
+	private static function should_merge_document_filters() {
+		if ( is_admin() ) {
+			return false;
+		}
+
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Post content plus the current FSE template (list and nav often live in different columns).
+	 *
+	 * @return string[]
+	 */
+	private static function get_document_contents() {
+		$contents = [];
+		$post     = get_post();
+
+		if ( $post instanceof \WP_Post && is_string( $post->post_content ) && '' !== $post->post_content ) {
+			$contents[] = $post->post_content;
+		}
+
+		global $_wp_current_template_content;
+		if ( is_string( $_wp_current_template_content ) && '' !== $_wp_current_template_content ) {
+			$contents[] = $_wp_current_template_content;
+		}
+
+		return $contents;
+	}
+
+	/**
+	 * @param array[] $blocks       Parsed blocks.
+	 * @param int[][] $include_sets Collected include arrays (empty = all).
+	 * @param int[]   $exclude_ids  Collected exclude IDs.
+	 */
+	private static function collect_filters_from_blocks( $blocks, array &$include_sets, array &$exclude_ids ) {
+		foreach ( $blocks as $block ) {
+			$name = isset( $block['blockName'] ) ? (string) $block['blockName'] : '';
+			if ( self::LIST_BLOCK === $name || self::CATEGORIES_BLOCK === $name ) {
+				$attrs           = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
+				$include_sets[] = Registry_Content::sanitize_term_ids( $attrs['includeTermIds'] ?? [] );
+				foreach ( Registry_Content::sanitize_term_ids( $attrs['excludeTermIds'] ?? [] ) as $id ) {
+					$exclude_ids[] = $id;
+				}
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+				self::collect_filters_from_blocks( $block['innerBlocks'], $include_sets, $exclude_ids );
+			}
+		}
+	}
+
+	/**
+	 * Render FAQ Card from Query Loop / list context.
+	 *
+	 * @param array     $attributes Block attributes.
+	 * @param string    $content    Inner content.
+	 * @param \WP_Block $block      Block instance.
+	 * @return string
+	 */
+	public static function render_card( $attributes, $content, $block ) {
+		unset( $content );
+
+		$post_id = 0;
+		if ( isset( $block->context['postId'] ) ) {
+			$post_id = (int) $block->context['postId'];
+		}
+		if ( $post_id <= 0 ) {
+			$post_id = (int) get_the_ID();
+		}
+
+		return self::render_card_for_post( $post_id, $attributes );
+	}
+
+	/**
+	 * Card attributes from the inner FAQ Card, with list-level fallback (editor SSR).
+	 *
+	 * @param array          $attributes List attributes.
+	 * @param \WP_Block|null $block      List block instance.
+	 * @return array{displayMode: string, showSources: bool, sourcesLabel: string, showPostType: bool}
+	 */
+	private static function resolve_card_attributes( $attributes, $block ) {
+		$inner = [];
+		if ( $block instanceof \WP_Block && ! empty( $block->parsed_block['innerBlocks'][0]['attrs'] ) ) {
+			$inner = $block->parsed_block['innerBlocks'][0]['attrs'];
+		}
+
+		$display = isset( $inner['displayMode'] ) ? sanitize_key( (string) $inner['displayMode'] ) : '';
+		if ( '' === $display && isset( $attributes['cardDisplayMode'] ) ) {
+			$display = sanitize_key( (string) $attributes['cardDisplayMode'] );
+		}
+		if ( 'heading' !== $display ) {
+			$display = 'accordion';
+		}
+
+		if ( array_key_exists( 'showSources', $inner ) ) {
+			$show_sources = ! empty( $inner['showSources'] );
+		} else {
+			$show_sources = ! empty( $attributes['cardShowSources'] );
+		}
+
+		if ( array_key_exists( 'sourcesLabel', $inner ) ) {
+			$sources_label = sanitize_text_field( (string) $inner['sourcesLabel'] );
+		} elseif ( isset( $attributes['cardSourcesLabel'] ) ) {
+			$sources_label = sanitize_text_field( (string) $attributes['cardSourcesLabel'] );
+		} else {
+			$sources_label = __( 'Used in', '4wp-faq' );
+		}
+
+		if ( array_key_exists( 'showPostType', $inner ) ) {
+			$show_post_type = ! empty( $inner['showPostType'] );
+		} else {
+			$show_post_type = ! empty( $attributes['cardShowPostType'] );
+		}
+
+		return [
+			'displayMode'  => $display,
+			'showSources'  => $show_sources,
+			'sourcesLabel' => $sources_label,
+			'showPostType' => $show_post_type,
+		];
+	}
+
+	/**
+	 * @param \WP_Post[]           $posts      Registry posts.
+	 * @param array<string, mixed> $card_attrs Card attributes.
+	 * @return string
+	 */
+	private static function render_items( $posts, $card_attrs ) {
+		if ( empty( $posts ) ) {
+			return self::render_empty();
+		}
+
+		$html = '<div class="forwp-faq-list__items">';
+		foreach ( $posts as $post ) {
+			if ( ! $post instanceof \WP_Post ) {
+				continue;
+			}
+			$html .= self::render_card_for_post( (int) $post->ID, $card_attrs );
+		}
+		$html .= '</div>';
+
+		return $html;
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function render_empty() {
+		return '<p class="forwp-faq-list__empty">' . esc_html__( 'No FAQ entries found.', '4wp-faq' ) . '</p>';
+	}
+
+	/**
+	 * Markup for one registry FAQ card.
+	 *
+	 * @param int                  $post_id    Registry post ID.
+	 * @param array<string, mixed> $attributes Card attributes.
+	 * @return string
+	 */
+	public static function render_card_for_post( $post_id, $attributes ) {
+		$post_id = (int) $post_id;
+		$post    = $post_id > 0 ? get_post( $post_id ) : null;
+
+		if ( ! $post instanceof \WP_Post ) {
+			return '';
+		}
+
+		if ( Settings::is_setup_complete() && $post->post_type !== Settings::get_post_type() ) {
+			return '';
+		}
+
+		$display      = isset( $attributes['displayMode'] ) ? sanitize_key( (string) $attributes['displayMode'] ) : 'accordion';
+		$show_sources = ! empty( $attributes['showSources'] );
+		$show_type    = ! empty( $attributes['showPostType'] );
+		$sources_label = isset( $attributes['sourcesLabel'] )
+			? sanitize_text_field( (string) $attributes['sourcesLabel'] )
+			: __( 'Used in', '4wp-faq' );
+		if ( 'heading' !== $display ) {
+			$display = 'accordion';
+		}
+
+		$question   = get_the_title( $post );
+		$answer     = Registry_Content::get_answer( $post_id );
+		$sources    = $show_sources ? Registry_Content::get_sources( $post_id ) : [];
+		$panel_id   = 'forwp-faq-card-panel-' . $post_id;
+		$term_slugs = Registry_Content::get_post_term_slugs( $post_id );
+		$search     = strtolower( trim( $question . ' ' . ( $answer['text'] ?? '' ) ) );
+		$active     = Faq_Filter::get_active_slug();
+		$hidden     = ( '' !== $active && ! in_array( $active, $term_slugs, true ) );
+
+		$extra   = isset( $attributes['className'] ) ? trim( (string) $attributes['className'] ) : '';
+		$classes = trim( 'wp-block-forwp-faq-card forwp-faq-card is-display-' . $display . ' ' . $extra );
+
+		$context = self::context_attr(
+			[
+				'cats'       => implode( ' ', $term_slugs ),
+				'searchText' => $search,
+			]
+		);
+
+		$hidden_attr = ' data-wp-bind--hidden="!state.isItemVisible"' . ( $hidden ? ' hidden' : '' );
+
+		$body  = self::render_answer( $answer );
+		$body .= self::render_sources( $sources, $sources_label, $show_type );
+
+		if ( 'heading' === $display ) {
+			return sprintf(
+				'<article class="%1$s"%2$s%3$s><h3 class="forwp-faq-card__question">%4$s</h3><div class="forwp-faq-card__body">%5$s</div></article>',
+				esc_attr( $classes ),
+				$context,
+				$hidden_attr,
+				esc_html( $question ),
+				$body
+			);
+		}
+
+		return sprintf(
+			'<article class="%1$s"%2$s%3$s><details class="forwp-faq-card__details"><summary class="forwp-faq-card__question" aria-controls="%4$s">%5$s</summary><div id="%4$s" class="forwp-faq-card__body">%6$s</div></details></article>',
+			esc_attr( $classes ),
+			$context,
+			$hidden_attr,
+			esc_attr( $panel_id ),
+			esc_html( $question ),
+			$body
+		);
+	}
+
+	/**
+	 * @param array{text: string, html: string} $answer Answer payload.
+	 * @return string
+	 */
+	private static function render_answer( $answer ) {
+		$html = isset( $answer['html'] ) ? trim( (string) $answer['html'] ) : '';
+		$text = isset( $answer['text'] ) ? trim( (string) $answer['text'] ) : '';
+
+		if ( '' !== $html ) {
+			return '<div class="forwp-faq-card__answer">' . wp_kses_post( $html ) . '</div>';
+		}
+
+		if ( '' !== $text ) {
+			return '<p class="forwp-faq-card__answer">' . esc_html( $text ) . '</p>';
+		}
+
+		return '';
+	}
+
+	/**
+	 * @param list<array{title: string, url: string, post_type_label: string}> $sources        Sources.
+	 * @param string                                                           $sources_label  Label placeholder.
+	 * @param bool                                                             $show_post_type Show CPT type.
+	 * @return string
+	 */
+	private static function render_sources( $sources, $sources_label = '', $show_post_type = false ) {
+		if ( empty( $sources ) ) {
+			return '';
+		}
+
+		$html = '<div class="forwp-faq-card__sources">';
+		if ( '' !== $sources_label ) {
+			$html .= '<p class="forwp-faq-card__sources-label">' . esc_html( $sources_label ) . '</p>';
+		}
+		$html .= '<ul class="forwp-faq-card__sources-list">';
+
+		foreach ( $sources as $source ) {
+			$html .= '<li class="forwp-faq-card__sources-item">';
+			$html .= '<a href="' . esc_url( $source['url'] ) . '">' . esc_html( $source['title'] ) . '</a>';
+			if ( $show_post_type && ! empty( $source['post_type_label'] ) ) {
+				$html .= ' <span class="forwp-faq-card__sources-type">' . esc_html( $source['post_type_label'] ) . '</span>';
+			}
+			$html .= '</li>';
+		}
+
+		$html .= '</ul></div>';
+
+		return $html;
+	}
+
+	/**
+	 * One category nav item.
+	 *
+	 * @param string   $slug     Term slug (empty = all).
+	 * @param string   $label    Label.
+	 * @param string   $url      Href.
+	 * @param bool     $seo_urls Pretty permalinks.
+	 * @param string   $active   Active slug.
+	 * @param int|null $count    Optional count.
+	 * @return string
+	 */
+	private static function render_category_item( $slug, $label, $url, $seo_urls, $active, $count ) {
+		$is_active = ( $slug === $active );
+		$context   = self::context_attr(
+			[
+				'slug'    => $slug,
+				'url'     => $url,
+				'seoUrls' => (bool) $seo_urls,
+			]
+		);
+
+		$html  = '<li class="forwp-faq-categories__item' . ( $is_active ? ' is-active' : '' ) . '"' . $context . ' data-wp-class--is-active="state.isNavActive">';
+		$html .= '<a class="forwp-faq-categories__link" href="' . esc_url( $url ) . '" data-faq-cat="' . esc_attr( $slug ) . '" data-wp-on--click="actions.selectCategory">';
+		$html .= '<span class="forwp-faq-categories__term">' . esc_html( $label ) . '</span>';
+		if ( null !== $count ) {
+			$html .= '<span class="forwp-faq-categories__count">' . esc_html( (string) $count ) . '</span>';
+		}
+		$html .= '</a></li>';
+
+		return $html;
+	}
+
+	/**
+	 * Enqueue view script and hydrate Interactivity state once.
+	 */
+	private static function ensure_runtime() {
+		static $done = false;
+
+		if ( function_exists( 'wp_enqueue_script_module' ) ) {
+			wp_enqueue_script_module( self::VIEW_SCRIPT );
+		}
+
+		if ( $done || ! function_exists( 'wp_interactivity_state' ) ) {
+			return;
+		}
+
+		$done = true;
+		wp_interactivity_state(
+			self::STORE,
+			[
+				'category'       => Faq_Filter::get_active_slug(),
+				'search'         => '',
+				'isNavActive'    => static function () {
+					$state    = wp_interactivity_state( 'forwp/faq' );
+					$context  = wp_interactivity_get_context( 'forwp/faq' );
+					$category = isset( $state['category'] ) ? (string) $state['category'] : '';
+					$slug     = isset( $context['slug'] ) ? (string) $context['slug'] : '';
+
+					return $category === $slug;
+				},
+				'isGroupVisible' => static function () {
+					$state    = wp_interactivity_state( 'forwp/faq' );
+					$context  = wp_interactivity_get_context( 'forwp/faq' );
+					$category = isset( $state['category'] ) ? (string) $state['category'] : '';
+					if ( '' === $category ) {
+						return true;
+					}
+
+					return ( isset( $context['slug'] ) ? (string) $context['slug'] : '' ) === $category;
+				},
+				'isItemVisible'  => static function () {
+					$state    = wp_interactivity_state( 'forwp/faq' );
+					$context  = wp_interactivity_get_context( 'forwp/faq' );
+					$category = isset( $state['category'] ) ? (string) $state['category'] : '';
+					$cats     = isset( $context['cats'] ) ? preg_split( '/\s+/', (string) $context['cats'], -1, PREG_SPLIT_NO_EMPTY ) : [];
+					if ( '' !== $category && ! in_array( $category, $cats, true ) ) {
+						return false;
+					}
+
+					return true;
+				},
+			]
+		);
+	}
+
+	/**
+	 * @param array<string, mixed> $context Context data.
+	 * @return string
+	 */
+	private static function context_attr( $context ) {
+		if ( function_exists( 'wp_interactivity_data_wp_context' ) ) {
+			return ' ' . wp_interactivity_data_wp_context( $context );
+		}
+
+		return ' data-wp-context="' . esc_attr( wp_json_encode( $context ) ) . '"';
+	}
+}
