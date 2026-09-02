@@ -7,28 +7,40 @@
 import { store, getContext } from '@wordpress/interactivity';
 
 const categoryFromLocation = () => {
+	const params = new URLSearchParams( window.location.search || '' );
+	const fromQuery = ( params.get( 'faq_cat' ) || '' ).trim();
+	if ( fromQuery ) {
+		return fromQuery;
+	}
+
+	const currentPath = ( window.location.pathname || '' ).replace( /\/+$/, '' );
+	const last = currentPath.split( '/' ).filter( Boolean ).pop() || '';
+	if ( ! last ) {
+		return '';
+	}
+
 	const links = document.querySelectorAll(
 		'.forwp-faq-categories__link[data-faq-cat]'
 	);
-	const currentPath = ( window.location.pathname || '' ).replace( /\/+$/, '' );
 	let match = '';
 	links.forEach( ( link ) => {
-		let hrefPath = '';
-		try {
-			hrefPath = new URL( link.href, window.location.origin ).pathname.replace(
-				/\/+$/,
-				''
-			);
-		} catch ( err ) {
-			hrefPath = ( link.getAttribute( 'href' ) || '' )
-				.split( '?' )[ 0 ]
-				.replace( /\/+$/, '' );
-		}
-		if ( hrefPath && hrefPath === currentPath ) {
-			match = link.getAttribute( 'data-faq-cat' ) || '';
+		const slug = link.getAttribute( 'data-faq-cat' ) || '';
+		if ( slug && slug === last ) {
+			match = slug;
 		}
 	} );
 	return match;
+};
+
+const countVisibleCards = () => {
+	const cards = document.querySelectorAll( '.forwp-faq-card' );
+	let n = 0;
+	cards.forEach( ( card ) => {
+		if ( ! card.hasAttribute( 'hidden' ) ) {
+			n += 1;
+		}
+	} );
+	return n;
 };
 
 const { state } = store( 'forwp/faq', {
@@ -42,7 +54,11 @@ const { state } = store( 'forwp/faq', {
 			if ( ! state.category ) {
 				return true;
 			}
-			return ( ctx.slug || '' ) === state.category;
+			if ( ( ctx.slug || '' ) === state.category ) {
+				return true;
+			}
+			const ancestors = ( ctx.ancestors || '' ).split( /\s+/ ).filter( Boolean );
+			return ancestors.indexOf( state.category ) !== -1;
 		},
 		get isItemVisible() {
 			const ctx = getContext() || {};
@@ -59,28 +75,25 @@ const { state } = store( 'forwp/faq', {
 	},
 	actions: {
 		selectCategory( event ) {
+			const ctx = getContext() || {};
+			if ( ctx.seoUrls ) {
+				return;
+			}
 			if ( event && typeof event.preventDefault === 'function' ) {
 				event.preventDefault();
 			}
-			const ctx = getContext() || {};
 			state.category = ctx.slug || '';
-			if (
-				ctx.seoUrls &&
-				ctx.url &&
-				window.history &&
-				window.history.pushState
-			) {
-				window.history.pushState(
-					{ forwpFaqCat: state.category },
-					'',
-					ctx.url
-				);
-			}
+			window.requestAnimationFrame( () => {
+				state.visibleCount = countVisibleCards();
+			} );
 		},
 		setSearch( event ) {
 			const target = event && event.target;
 			state.search =
 				target && typeof target.value === 'string' ? target.value : '';
+			window.requestAnimationFrame( () => {
+				state.visibleCount = countVisibleCards();
+			} );
 		},
 		preventSearchSubmit( event ) {
 			if ( event && typeof event.preventDefault === 'function' ) {
@@ -101,6 +114,11 @@ if ( typeof state.search !== 'string' ) {
 	state.search = '';
 }
 
+if ( typeof state.visibleCount !== 'number' ) {
+	state.visibleCount = countVisibleCards();
+}
+
 window.addEventListener( 'popstate', () => {
 	state.category = categoryFromLocation();
+	state.visibleCount = countVisibleCards();
 } );

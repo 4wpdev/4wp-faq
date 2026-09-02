@@ -142,10 +142,6 @@ registerBlockType( 'forwp/faq-categories', {
 						{ showAll ? (
 							<TextControl
 								label={ __( 'All categories label', '4wp-faq' ) }
-								help={ __(
-									'Replaceable label. The link still shows every question in the synced list.',
-									'4wp-faq'
-								) }
 								value={ allLabel }
 								onChange={ ( value ) =>
 									setAttributes( { allLabel: value || '' } )
@@ -181,6 +177,7 @@ registerBlockType( 'forwp/faq-categories', {
 											includeTermIds: namesToIds( tokens, terms ),
 										} )
 									}
+									__experimentalExpandOnFocus
 									__nextHasNoMarginBottom
 								/>
 								<p className="forwp-faq-categories-editor__help">
@@ -198,16 +195,25 @@ registerBlockType( 'forwp/faq-categories', {
 											excludeTermIds: namesToIds( tokens, terms ),
 										} )
 									}
+									__experimentalExpandOnFocus
 									__nextHasNoMarginBottom
 								/>
 							</>
 						) }
 					</PanelBody>
 					<PanelBody title={ __( 'SEO', '4wp-faq' ) } initialOpen={ false }>
+						{ ! getDisplayConfig().seoUrlsEnabled ? (
+							<Notice status="warning" isDismissible={ false }>
+								{ __(
+									'Pretty category URLs are off in 4WP FAQ Settings. Turn them on there first, then enable this toggle. Until then, clicks filter the list in place and the page URL stays unchanged.',
+									'4wp-faq'
+								) }
+							</Notice>
+						) : null }
 						<ToggleControl
 							label={ __( 'SEO-friendly category URLs', '4wp-faq' ) }
 							help={ __(
-								'One extra segment after this page or post, e.g. /faq/benalmadena-en/. Off: filter in place without changing the URL.',
+								'Adds /term-slug/ after this page when Settings → SEO: pretty category URLs is also on. That URL uses the category Display title as H1 and the category SEO title/description as document meta. Off here: filter in place, URL unchanged.',
 								'4wp-faq'
 							) }
 							checked={ !! seoUrls }

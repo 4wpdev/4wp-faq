@@ -1,10 +1,10 @@
 === 4WP FAQ ===
-Contributors: 4wpdev
+Contributors: 4wpdev, anatolikkk
 Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 2.0.1
+Stable tag: 2.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,6 +17,14 @@ Smart FAQ wrapper for core Accordion: JSON-LD, optional registry, and per-block 
 A plugin by [4wp.dev](https://4wp.dev/). **4WP** is our project brand; this plugin is not affiliated with, endorsed, or sponsored by WordPress.
 
 Source code and releases: [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)
+
+= Blocks =
+
+* **4WP FAQ** (`forwp/faq`) — wrap Accordion / Accordion Item for FAQPage JSON-LD and registry scan
+* **4WP FAQ List** (`forwp/faq-list`) — registry glossary: grouped or flat, include/exclude categories
+* **4WP FAQ Categories** (`forwp/faq-categories`) — category nav that filters the List (Interactivity API)
+* **4WP FAQ Count** (`forwp/faq-count`) — live count for All / current category / search (`[forwp_faq_count]`)
+* **4WP FAQ Card** (`forwp/faq-card`) — inner card for the List (not shown in the inserter)
 
 = Development =
 
@@ -31,9 +39,12 @@ From a clone of the repository:
 = Key features =
 
 * Wrap **Accordion** / **Accordion Item** (legacy **Details** supported)
-* **FAQPage JSON-LD** — site-wide toggle plus per-block override
-* Optional **FAQ registry** CPT with content scan and usage stats
+* **FAQPage JSON-LD** — site-wide toggle plus per-block override; hub pages output the questions actually shown
+* Optional **FAQ registry** CPT with content scan and usage stats (“Used in” sources)
 * **FAQ categories** — create in admin, pick per block, or auto-create on scan from the page
+* **FSE hub blocks** — List, Categories, Count, and Card for registry-powered FAQ archives
+* Preview count per category on the All view + optional pretty category URLs
+* Drag-and-drop category order on the taxonomy screen
 * **Polylang** — registry categories respect the language of the page where the FAQ block lives
 * Setup wizard for registry post type and taxonomy slugs
 * **Convert to FAQ** toolbar action on Accordion blocks
@@ -44,15 +55,16 @@ From a clone of the repository:
 1. Build FAQs with core Accordion blocks (or convert existing Accordion).
 2. Click **Convert to FAQ** to wrap content in `forwp/faq`.
 3. Enable JSON-LD in **FAQ → Settings** (recommended for SEO) or per block.
-4. Optionally complete setup to aggregate questions into a registry list.
+4. Optionally complete setup to aggregate questions into a registry list, then place List + Categories on a hub page.
 
-JSON-LD on the front end does not require the registry. The registry is for browsing, reuse tracking, and future features.
+JSON-LD on the front end does not require the registry. The registry is for browsing, reuse tracking, and hub layouts.
 
 == Installation ==
 
 1. Upload the plugin to `/wp-content/plugins/4wp-faq/` or install from the Plugins screen.
 2. Activate **4WP FAQ**.
 3. Add or convert Accordion blocks, then open **FAQ → Settings** for JSON-LD and registry options.
+4. After registry setup + rescan, add **4WP FAQ List** and **4WP FAQ Categories** on a page or template.
 
 == Frequently Asked Questions ==
 
@@ -64,6 +76,10 @@ No. 4WP FAQ is a thin wrapper. Your theme and block styles stay the same.
 
 No. Turn it on under **FAQ → Settings** (site-wide) or enable it for individual blocks in the block sidebar.
 
+= Why does wordpress.org show only one block? =
+
+Older packages registered List / Categories / Count from PHP only. From 2.2.0 each public block declares `editorScript` (and styles where applicable) in its `block.json` so the directory can discover them.
+
 = What happens if I reset setup? =
 
 You can change registry slugs in the wizard again, but FAQ **categories are removed**. Existing registry posts remain on the previous post type until you complete setup and run a new scan.
@@ -71,10 +87,24 @@ You can change registry slugs in the wizard again, but FAQ **categories are remo
 == Screenshots ==
 
 1. 4WP FAQ block wrapping core Accordion in the editor
-2. Settings screen — overview stats, rescan, and JSON-LD toggle
-3. Block sidebar — per-block JSON-LD override
+2. Settings — overview, rescan, JSON-LD, preview count, and pretty category URLs
+3. FAQ hub — List + Categories (and Count) in the Site Editor
 
 == Changelog ==
+
+= 2.2.0 =
+* Listing: declare `editorScript` / `style` in block.json for List, Categories, Count, and Card so wordpress.org discovers hub blocks (not only the FAQ wrapper).
+* Contributors: add `anatolikkk` (Anatoliy Dovgun) alongside `4wpdev`.
+* Add **4WP FAQ Count** block and `[forwp_faq_count]` shortcode.
+* Hub: per-category preview on All view, “View all” links, SEO/pretty category URLs, category SEO title/description, drag-and-drop term order.
+* Card: optional “Used in” source links from registry usage meta.
+* Admin: preview-per-category and SEO URL settings; clearer JSON-LD help for hub pages.
+* Stabilize readme Stable tag / plugin header / package.json on **2.2.0**.
+
+= 2.1.0 =
+* Add FSE registry hub blocks: **4WP FAQ List**, **4WP FAQ Card**, **4WP FAQ Categories**.
+* Shared include/exclude filters between List and Categories (Interactivity API).
+* Registry content helpers and front-end FAQ view script.
 
 = 2.0.3 =
 * Fix: FAQPage JSON-LD uses `<summary>` text as `Question.name` for core Details blocks (no longer duplicates the answer).
@@ -99,6 +129,12 @@ You can change registry slugs in the wizard again, but FAQ **categories are remo
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.2.0 =
+Hub blocks visible on the plugin directory, Count block, preview/SEO URL settings, and Anatoliy Dovgun as contributor. Re-upload screenshots to SVN assets if captions still show empty images.
+
+= 2.1.0 =
+Adds registry FAQ List, Card, and Categories blocks for FSE hubs.
 
 = 2.0.3 =
 Fixes FAQPage schema for Details blocks and moves JSON-LD to the document head.

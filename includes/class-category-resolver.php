@@ -25,6 +25,8 @@ final class Category_Resolver {
 	/**
 	 * Resolve category term IDs from block attributes and source post language.
 	 *
+	 * First ID is the primary category. Extra IDs are additional terms.
+	 *
 	 * @param array<string, mixed> $attrs          Block attributes.
 	 * @param int                  $source_post_id Source post ID.
 	 * @return int[]
@@ -39,28 +41,66 @@ final class Category_Resolver {
 			return [];
 		}
 
+		$lang = Polylang::get_post_language( $source_post_id );
+		$ids  = [];
+
+		if ( ! empty( $attrs['categoryTermIds'] ) && is_array( $attrs['categoryTermIds'] ) ) {
+			foreach ( $attrs['categoryTermIds'] as $raw_id ) {
+				$resolved = Polylang::resolve_term_for_language( (int) $raw_id, $lang );
+				if ( $resolved > 0 ) {
+					$ids[] = $resolved;
+				}
+			}
+		}
+
+		if ( empty( $ids ) ) {
+			$legacy_id = Polylang::resolve_term_for_language( (int) ( $attrs['categoryTermId'] ?? 0 ), $lang );
+			if ( $legacy_id > 0 ) {
+				$ids[] = $legacy_id;
+			}
+		}
+
+		$name = sanitize_text_field( (string) ( $attrs['categoryName'] ?? '' ) );
 		$mode = isset( $attrs['categoryMode'] ) ? sanitize_key( (string) $attrs['categoryMode'] ) : self::MODE_NONE;
-		if ( self::MODE_NONE === $mode || '' === $mode ) {
-			return [];
+
+		if ( '' !== $name && ( self::MODE_NEW === $mode || empty( $ids ) || '' !== $name ) ) {
+			$created = Polylang::ensure_term_by_name( $name, $taxonomy, $lang );
+			if ( $created > 0 && ! in_array( $created, $ids, true ) ) {
+				if ( empty( $ids ) ) {
+					array_unshift( $ids, $created );
+				} else {
+					$ids[] = $created;
+				}
+			}
 		}
 
-		$lang    = Polylang::get_post_language( $source_post_id );
-		$term_id = 0;
+		if ( empty( $ids ) ) {
+			if ( self::MODE_NONE === $mode || '' === $mode ) {
+				return [];
+			}
 
-		if ( self::MODE_EXISTING === $mode ) {
-			$term_id = Polylang::resolve_term_for_language( (int) ( $attrs['categoryTermId'] ?? 0 ), $lang );
+			if ( self::MODE_EXISTING === $mode ) {
+				$legacy_id = Polylang::resolve_term_for_language( (int) ( $attrs['categoryTermId'] ?? 0 ), $lang );
+				if ( $legacy_id > 0 ) {
+					$ids[] = $legacy_id;
+				}
+			}
+
+			if ( self::MODE_NEW === $mode && '' !== $name ) {
+				$created = Polylang::ensure_term_by_name( $name, $taxonomy, $lang );
+				if ( $created > 0 ) {
+					$ids[] = $created;
+				}
+			}
 		}
 
-		if ( self::MODE_NEW === $mode ) {
-			$name    = sanitize_text_field( (string) ( $attrs['categoryName'] ?? '' ) );
-			$term_id = Polylang::ensure_term_by_name( $name, $taxonomy, $lang );
+		$term_ids = [];
+		foreach ( $ids as $term_id ) {
+			$term_id = (int) $term_id;
+			if ( $term_id > 0 && term_exists( $term_id, $taxonomy ) && ! in_array( $term_id, $term_ids, true ) ) {
+				$term_ids[] = $term_id;
+			}
 		}
-
-		if ( $term_id <= 0 || ! term_exists( $term_id, $taxonomy ) ) {
-			return [];
-		}
-
-		$term_ids = [ $term_id ];
 
 		/**
 		 * Filter term IDs resolved from a forwp/faq block before registry sync.
@@ -80,7 +120,7 @@ final class Category_Resolver {
 	 *
 	 * @param int    $post_id Source post ID (for language filter).
 	 * @param string $lang    Optional language override.
-	 * @return array<int, array{id:int,name:string,slug:string}>
+	 * @return array<int, array{id:int,name:string,slug:string,parent:int}>
 	 */
 	public static function list_editor_terms( $post_id = 0, $lang = '' ) {
 		if ( ! Settings::is_setup_complete() ) {
@@ -102,7 +142,7 @@ final class Category_Resolver {
 		$args = [
 			'taxonomy'   => $taxonomy,
 			'hide_empty' => false,
-			'orderby'    => 'name',
+			'orderby'    => 'term_order',
 			'order'      => 'ASC',
 		];
 
@@ -122,9 +162,10 @@ final class Category_Resolver {
 			}
 
 			$items[] = [
-				'id'   => (int) $term->term_id,
-				'name' => $term->name,
-				'slug' => $term->slug,
+				'id'     => (int) $term->term_id,
+				'name'   => $term->name,
+				'slug'   => $term->slug,
+				'parent' => (int) $term->parent,
 			];
 		}
 

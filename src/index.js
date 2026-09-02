@@ -14,6 +14,7 @@ import {
 	TextControl,
 	Spinner,
 	Button,
+	FormTokenField,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 import { serialize } from '@wordpress/blocks';
@@ -342,9 +343,20 @@ registerBlockType( 'forwp/faq', {
 			);
 		}, [ currentBlock ] );
 		const jsonLdMode = attributes.jsonLd || '';
-		const categoryMode = attributes.categoryMode || CATEGORY_MODE_NONE;
+		const categoryTermIds = Array.isArray( attributes.categoryTermIds )
+			? attributes.categoryTermIds
+			: [];
 		const categoryTermId = attributes.categoryTermId || 0;
+		const selectedTermIds =
+			categoryTermIds.length > 0
+				? categoryTermIds
+				: categoryTermId
+				? [ categoryTermId ]
+				: [];
 		const categoryName = attributes.categoryName || '';
+		const [ showNewCategory, setShowNewCategory ] = useState(
+			!! ( categoryName && String( categoryName ).trim() )
+		);
 		const { terms, loading: termsLoading, registryReady } = useRegistryCategories( postId );
 		const outputsJsonLd = blockOutputsJsonLd( jsonLdMode );
 		const globalOn = getGlobalJsonLd();
@@ -433,76 +445,70 @@ registerBlockType( 'forwp/faq', {
 									'4wp-faq'
 								) }
 							</Notice>
+						) : termsLoading ? (
+							<Spinner />
 						) : (
 							<>
-								<SelectControl
-									label={ __( 'Category for this FAQ block', '4wp-faq' ) }
+								<FormTokenField
+									label={ __( 'FAQ categories', '4wp-faq' ) }
 									help={ __(
-										'Applied to registry entries when you run a scan. Default: none.',
+										'Search by name. The first category is the primary group for this FAQ. Applied on scan.',
 										'4wp-faq'
 									) }
-									value={ categoryMode }
-									options={ [
-										{
-											label: __( 'None', '4wp-faq' ),
-											value: CATEGORY_MODE_NONE,
-										},
-										{
-											label: __( 'Existing category', '4wp-faq' ),
-											value: CATEGORY_MODE_EXISTING,
-										},
-										{
-											label: __( 'Create new category', '4wp-faq' ),
-											value: CATEGORY_MODE_NEW,
-										},
-									] }
-									onChange={ ( value ) => {
-										const next = value || CATEGORY_MODE_NONE;
+									value={ ( selectedTermIds || [] )
+										.map(
+											( id ) =>
+												terms.find( ( term ) => term.id === id )?.name
+										)
+										.filter( Boolean ) }
+									suggestions={ terms.map( ( term ) => term.name ) }
+									onChange={ ( tokens ) => {
+										const ids = ( tokens || [] )
+											.map(
+												( name ) =>
+													terms.find( ( term ) => term.name === name )?.id
+											)
+											.filter( Boolean );
 										setAttributes( {
-											categoryMode: next,
-											categoryTermId: next === CATEGORY_MODE_EXISTING ? categoryTermId : 0,
-											categoryName: next === CATEGORY_MODE_NEW ? categoryName : '',
+											categoryTermIds: ids,
+											categoryTermId: ids[ 0 ] || 0,
+											categoryMode: ids.length
+												? CATEGORY_MODE_EXISTING
+												: categoryName
+												? CATEGORY_MODE_NEW
+												: CATEGORY_MODE_NONE,
 										} );
 									} }
+									__experimentalExpandOnFocus
+									__nextHasNoMarginBottom
 								/>
-								{ categoryMode === CATEGORY_MODE_EXISTING ? (
-									termsLoading ? (
-										<Spinner />
-									) : (
-										<SelectControl
-											label={ __( 'FAQ category', '4wp-faq' ) }
-											value={ String( categoryTermId || '' ) }
-											options={ [
-												{
-													label: __( 'Select a category…', '4wp-faq' ),
-													value: '',
-												},
-												...terms.map( ( term ) => ( {
-													label: term.name,
-													value: String( term.id ),
-												} ) ),
-											] }
-											onChange={ ( value ) =>
-												setAttributes( {
-													categoryTermId: value ? parseInt( value, 10 ) : 0,
-												} )
-											}
-										/>
-									)
-								) : null }
-								{ categoryMode === CATEGORY_MODE_NEW ? (
+								{ showNewCategory ? (
 									<TextControl
 										label={ __( 'New category name', '4wp-faq' ) }
 										help={ __(
-											'Created in the FAQ registry taxonomy on scan (language follows this page).',
+											'Created in the FAQ registry taxonomy on scan (language follows this page). Becomes primary if no existing category is selected.',
 											'4wp-faq'
 										) }
 										value={ categoryName }
 										onChange={ ( value ) =>
-											setAttributes( { categoryName: value || '' } )
+											setAttributes( {
+												categoryName: value || '',
+												categoryMode: selectedTermIds.length
+													? CATEGORY_MODE_EXISTING
+													: value
+													? CATEGORY_MODE_NEW
+													: CATEGORY_MODE_NONE,
+											} )
 										}
 									/>
-								) : null }
+								) : (
+									<Button
+										variant="secondary"
+										onClick={ () => setShowNewCategory( true ) }
+									>
+										{ __( 'Add new', '4wp-faq' ) }
+									</Button>
+								) }
 							</>
 						) }
 					</PanelBody>

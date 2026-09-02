@@ -1,0 +1,9 @@
+.wp-list-table.tags tbody tr.iedit {
+	cursor: move;
+}
+
+.forwp-faq-term-order-placeholder {
+	height: 48px;
+	background: #f0f0f1;
+	outline: 1px dashed #c3c4c7;
+}

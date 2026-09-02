@@ -23,6 +23,8 @@ function get_required_include_files(): array {
 		'includes/class-faq-filter.php',
 		'includes/class-display-blocks.php',
 		'includes/class-category-resolver.php',
+		'includes/class-faq-terms.php',
+		'includes/class-term-order.php',
 		'includes/integrations/class-polylang.php',
 		'includes/integrations/class-yoast.php',
 		'includes/class-editor-rest.php',

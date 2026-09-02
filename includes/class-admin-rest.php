@@ -40,6 +40,14 @@ class Admin_Rest {
 							'type'     => 'boolean',
 							'required' => false,
 						],
+						'preview_per_category' => [
+							'type'     => 'integer',
+							'required' => false,
+						],
+						'seo_urls'             => [
+							'type'     => 'boolean',
+							'required' => false,
+						],
 					],
 				],
 			]
@@ -89,7 +97,9 @@ class Admin_Rest {
 	public static function get_settings() {
 		return new \WP_REST_Response(
 			[
-				'output_json_ld' => Settings::is_output_json_ld_enabled(),
+				'output_json_ld'         => Settings::is_output_json_ld_enabled(),
+				'preview_per_category'   => Settings::get_preview_per_category(),
+				'seo_urls'               => Settings::is_seo_urls_enabled(),
 				'setup_complete' => Settings::is_setup_complete(),
 				'setup_skipped'  => Settings::is_setup_skipped(),
 				'setup_url'      => Setup_Wizard::get_page_url(),
@@ -105,6 +115,14 @@ class Admin_Rest {
 	public static function update_settings( $request ) {
 		if ( $request->has_param( 'output_json_ld' ) ) {
 			Settings::set_output_json_ld( (bool) $request->get_param( 'output_json_ld' ) );
+		}
+
+		if ( $request->has_param( 'preview_per_category' ) ) {
+			Settings::set_preview_per_category( (int) $request->get_param( 'preview_per_category' ) );
+		}
+
+		if ( $request->has_param( 'seo_urls' ) ) {
+			Settings::set_seo_urls( (bool) $request->get_param( 'seo_urls' ) );
 		}
 
 		return self::get_settings();

@@ -27,8 +27,15 @@
 	gap: 0.35rem;
 }
 
-.forwp-faq-categories__item {
+.forwp-faq-categories__children {
 	margin: 0;
+	padding: 0 0 0 0.85rem;
+	list-style: none;
+}
+
+.forwp-faq-categories.is-orientation-horizontal .forwp-faq-categories__children {
+	padding-left: 0;
+	flex-basis: 100%;
 }
 
 .forwp-faq-categories__link {

@@ -53,5 +53,8 @@
 				"type": "number"
 			}
 		}
-	}
+	},
+	"editorScript": "file:../../build/faq-categories.js",
+	"style": "file:../../build/style-faq-categories.css",
+	"editorStyle": "file:../../build/style-faq-categories.css"
 }

@@ -24,6 +24,8 @@ class Plugin {
 		Polylang::init();
 		Yoast::init();
 		Display_Blocks::init();
+		Faq_Terms::init();
+		Term_Order::init();
 
 		add_action( 'init', [ __CLASS__, 'register_block' ] );
 		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'enqueue_block_editor_assets' ] );
@@ -367,6 +369,17 @@ class Plugin {
 				'auth_callback' => '__return_true',
 			]
 		);
+
+		register_post_meta(
+			Settings::get_post_type(),
+			Faq_Terms::PRIMARY_META,
+			[
+				'type'              => 'integer',
+				'single'            => true,
+				'show_in_rest'      => true,
+				'auth_callback'     => '__return_true',
+			]
+		);
 	}
 
 	/**
@@ -386,11 +399,7 @@ class Plugin {
 			return;
 		}
 
-		if ( ! has_block( self::BLOCK_NAME, $post ) ) {
-			return;
-		}
-
-		$entities = self::collect_schema_entities_for_post( $post );
+		$entities = self::collect_schema_entities_for_current_view( $post );
 		if ( empty( $entities ) ) {
 			return;
 		}
@@ -433,6 +442,66 @@ class Plugin {
 		}
 
 		return Settings::is_output_json_ld_enabled();
+	}
+
+	/**
+	 * FAQPage entities for the current view: hub list (what is on the page) or in-place wrappers.
+	 *
+	 * @param \WP_Post $post Host post.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function collect_schema_entities_for_current_view( $post ) {
+		if ( Display_Blocks::document_has_block( Display_Blocks::LIST_BLOCK ) ) {
+			return self::collect_schema_entities_from_list();
+		}
+
+		return self::collect_schema_entities_for_post( $post );
+	}
+
+	/**
+	 * JSON-LD from registry cards actually rendered on this request.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	private static function collect_schema_entities_from_list() {
+		if ( ! Settings::is_output_json_ld_enabled() || ! Settings::is_setup_complete() ) {
+			return [];
+		}
+
+		$context = Display_Blocks::get_list_query_context();
+		$posts   = Registry_Content::get_visible_posts(
+			$context['includeTermIds'],
+			$context['excludeTermIds'],
+			$context['activeSlug'],
+			$context['previewLimit'],
+			$context['layout']
+		);
+
+		$items = [];
+		foreach ( $posts as $faq_post ) {
+			if ( ! $faq_post instanceof \WP_Post ) {
+				continue;
+			}
+
+			$answer = Registry_Content::get_answer( (int) $faq_post->ID );
+			$text   = isset( $answer['text'] ) ? trim( (string) $answer['text'] ) : '';
+			if ( '' === $text && ! empty( $answer['html'] ) ) {
+				$text = trim( wp_strip_all_tags( (string) $answer['html'] ) );
+			}
+
+			$question = trim( (string) $faq_post->post_title );
+			if ( '' === $question || '' === $text ) {
+				continue;
+			}
+
+			$items[] = [
+				'question' => $question,
+				'answer'   => $text,
+				'anchor'   => 'faq-' . (int) $faq_post->ID,
+			];
+		}
+
+		return self::build_schema_entities( $items );
 	}
 
 	/**
@@ -680,6 +749,13 @@ class Plugin {
 
 			$items = array_merge( $items, self::extract_faq_items_from_content( $post->post_content, $post ) );
 		}
+
+		/**
+		 * Extra FAQ items to merge into the registry scan (JSON catalogs, virtual sources).
+		 *
+		 * @param array<int, array<string, mixed>> $items Items extracted from posts.
+		 */
+		$items = apply_filters( 'forwp_faq_scan_items', $items );
 
 		$aggregated = self::aggregate_items( $items );
 		self::sync_faq_posts( $aggregated );
@@ -1105,22 +1181,39 @@ class Plugin {
 					'answers'             => [],
 					'answers_html'        => [],
 					'source_titles'       => [],
+					'source_urls'         => [],
 					'used_in_posts'       => [],
 					'used_in_post_types'  => [],
 					'category_term_ids'   => [],
+					'primary_term_id'     => 0,
 				];
 			}
 
 			$aggregated[ $key ]['answers'][]             = $item['answer'];
 			$aggregated[ $key ]['answers_html'][]        = $item['answer_html'];
-			$aggregated[ $key ]['source_titles'][]     = $item['post_title'];
-			$aggregated[ $key ]['used_in_posts'][]      = $item['post_id'];
-			$aggregated[ $key ]['used_in_post_types'][] = $item['post_type'];
+			$aggregated[ $key ]['source_titles'][]       = $item['post_title'];
+			$post_id                                     = (int) ( $item['post_id'] ?? 0 );
+			if ( $post_id > 0 ) {
+				$aggregated[ $key ]['used_in_posts'][] = $post_id;
+			} elseif ( ! empty( $item['permalink'] ) && is_string( $item['permalink'] ) ) {
+				$aggregated[ $key ]['source_urls'][] = [
+					'title'           => (string) ( $item['post_title'] ?? '' ),
+					'url'             => $item['permalink'],
+					'post_type'       => (string) ( $item['post_type'] ?? '' ),
+					'post_type_label' => (string) ( $item['post_type_label'] ?? $item['post_type'] ?? '' ),
+				];
+			}
+			if ( ! empty( $item['post_type'] ) ) {
+				$aggregated[ $key ]['used_in_post_types'][] = $item['post_type'];
+			}
 			if ( ! empty( $item['category_term_ids'] ) && is_array( $item['category_term_ids'] ) ) {
 				$aggregated[ $key ]['category_term_ids'] = array_merge(
 					$aggregated[ $key ]['category_term_ids'],
 					$item['category_term_ids']
 				);
+				if ( empty( $aggregated[ $key ]['primary_term_id'] ) ) {
+					$aggregated[ $key ]['primary_term_id'] = (int) $item['category_term_ids'][0];
+				}
 			}
 		}
 
@@ -1128,10 +1221,11 @@ class Plugin {
 			$aggregated[ $key ]['answers']            = self::unique_values( $data['answers'] );
 			$aggregated[ $key ]['answers_html']       = self::unique_values( $data['answers_html'] );
 			$aggregated[ $key ]['source_titles']      = self::unique_values( $data['source_titles'] );
+			$aggregated[ $key ]['source_urls']        = self::unique_values( $data['source_urls'] ?? [] );
 			$aggregated[ $key ]['used_in_posts']      = self::unique_values( $data['used_in_posts'] );
 			$aggregated[ $key ]['used_in_post_types'] = self::unique_values( $data['used_in_post_types'] );
 			$aggregated[ $key ]['category_term_ids']  = self::unique_values( $data['category_term_ids'] ?? [] );
-			$aggregated[ $key ]['count_usage']        = count( $aggregated[ $key ]['used_in_posts'] );
+			$aggregated[ $key ]['count_usage']        = count( $aggregated[ $key ]['used_in_posts'] ) + count( $aggregated[ $key ]['source_urls'] );
 		}
 
 		return $aggregated;
@@ -1164,6 +1258,15 @@ class Plugin {
 		$term_ids = apply_filters( 'forwp_faq_registry_term_ids', $term_ids, $post_id, $data );
 
 		wp_set_object_terms( $post_id, $term_ids, $taxonomy, false );
+
+		$primary = (int) ( $data['primary_term_id'] ?? 0 );
+		if ( $primary > 0 && in_array( $primary, $term_ids, true ) ) {
+			update_post_meta( $post_id, Faq_Terms::PRIMARY_META, $primary );
+		} elseif ( ! empty( $term_ids ) ) {
+			update_post_meta( $post_id, Faq_Terms::PRIMARY_META, (int) $term_ids[0] );
+		} else {
+			delete_post_meta( $post_id, Faq_Terms::PRIMARY_META );
+		}
 
 		if ( Polylang::is_active() && ! empty( $data['used_in_posts'] ) && is_array( $data['used_in_posts'] ) ) {
 			$source_post_id = (int) $data['used_in_posts'][0];
@@ -1222,6 +1325,7 @@ class Plugin {
 			update_post_meta( $post_id, 'answers', $data['answers'] );
 			update_post_meta( $post_id, 'answers_html', $data['answers_html'] );
 			update_post_meta( $post_id, 'source_titles', $data['source_titles'] );
+			update_post_meta( $post_id, 'source_urls', $data['source_urls'] ?? [] );
 			update_post_meta( $post_id, 'original_question', $data['question'] );
 			update_post_meta( $post_id, 'used_in_posts', $data['used_in_posts'] );
 			update_post_meta( $post_id, 'used_in_post_types', $data['used_in_post_types'] );
@@ -1523,7 +1627,7 @@ class Plugin {
 	private static function unique_values( $values ) {
 		$unique = [];
 		foreach ( $values as $value ) {
-			if ( '' === $value || null === $value ) {
+			if ( null === $value || '' === $value ) {
 				continue;
 			}
 			if ( ! in_array( $value, $unique, true ) ) {

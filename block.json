@@ -20,6 +20,13 @@
       "type": "string",
       "default": "none"
     },
+    "categoryTermIds": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "number"
+      }
+    },
     "categoryTermId": {
       "type": "number",
       "default": 0

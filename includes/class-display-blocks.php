@@ -18,11 +18,13 @@ class Display_Blocks {
 	public const LIST_BLOCK       = 'forwp/faq-list';
 	public const CARD_BLOCK       = 'forwp/faq-card';
 	public const CATEGORIES_BLOCK = 'forwp/faq-categories';
+	public const COUNT_BLOCK      = 'forwp/faq-count';
 	public const STORE            = 'forwp/faq';
 
 	public const LIST_SCRIPT       = 'forwp-faq-list-editor';
 	public const CARD_SCRIPT       = 'forwp-faq-card-editor';
 	public const CATEGORIES_SCRIPT = 'forwp-faq-categories-editor';
+	public const COUNT_SCRIPT      = 'forwp-faq-count-editor';
 	public const VIEW_SCRIPT       = 'forwp-faq-view';
 	public const LIST_STYLE        = 'forwp-faq-list';
 	public const CARD_STYLE        = 'forwp-faq-card';
@@ -36,6 +38,7 @@ class Display_Blocks {
 		add_action( 'init', [ __CLASS__, 'register_blocks' ] );
 		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'localize_editor_scripts' ], 20 );
 		add_filter( 'render_block_core/search', [ __CLASS__, 'render_related_search' ], 10, 2 );
+		add_shortcode( 'forwp_faq_count', [ __CLASS__, 'shortcode_count' ] );
 	}
 
 	/**
@@ -59,6 +62,11 @@ class Display_Blocks {
 				'script' => self::CATEGORIES_SCRIPT,
 				'style'  => self::CATEGORIES_STYLE,
 				'render' => [ __CLASS__, 'render_categories' ],
+			],
+			'faq-count'      => [
+				'script' => self::COUNT_SCRIPT,
+				'style'  => self::LIST_STYLE,
+				'render' => [ __CLASS__, 'render_count' ],
 			],
 		];
 
@@ -88,6 +96,7 @@ class Display_Blocks {
 			self::LIST_SCRIPT       => 'faq-list',
 			self::CARD_SCRIPT       => 'faq-card',
 			self::CATEGORIES_SCRIPT => 'faq-categories',
+			self::COUNT_SCRIPT      => 'faq-count',
 		];
 
 		foreach ( $scripts as $handle => $file ) {
@@ -164,9 +173,10 @@ class Display_Blocks {
 			'postType'              => Settings::get_post_type(),
 			'taxonomy'              => Settings::get_taxonomy(),
 			'categoriesPath'        => '/forwp-faq/v1/editor/categories',
+			'seoUrlsEnabled'        => Settings::is_seo_urls_enabled(),
 		];
 
-		foreach ( [ self::LIST_SCRIPT, self::CARD_SCRIPT, self::CATEGORIES_SCRIPT ] as $handle ) {
+		foreach ( [ self::LIST_SCRIPT, self::CARD_SCRIPT, self::CATEGORIES_SCRIPT, self::COUNT_SCRIPT ] as $handle ) {
 			if ( wp_script_is( $handle, 'registered' ) ) {
 				wp_localize_script( $handle, 'forwpFaqDisplay', $config );
 			}
@@ -251,33 +261,18 @@ class Display_Blocks {
 
 		$html = '<div ' . $wrapper . '>';
 
+		$preview_limit = '' === $active ? Settings::get_preview_per_category() : 0;
+		$seo_urls      = self::document_uses_seo_urls();
+
 		if ( 'flat' === $layout ) {
-			$posts = Registry_Content::get_flat_posts( $include_term_ids, $exclude_term_ids );
+			$posts = Registry_Content::get_visible_posts( $include_term_ids, $exclude_term_ids, $active, $preview_limit, 'flat' );
 			$html .= self::render_items( $posts, $card_attrs );
 		} else {
-			$groups = Registry_Content::get_grouped_posts( $include_term_ids, $exclude_term_ids );
+			$groups = Registry_Content::get_visible_group_tree( $include_term_ids, $exclude_term_ids, $active, $preview_limit );
 			if ( empty( $groups ) ) {
 				$html .= self::render_empty();
 			} else {
-				foreach ( $groups as $group ) {
-					$posts = isset( $group['posts'] ) && is_array( $group['posts'] ) ? $group['posts'] : [];
-					if ( empty( $posts ) ) {
-						continue;
-					}
-
-					$term  = $group['term'] ?? null;
-					$slug  = $term instanceof \WP_Term ? $term->slug : '';
-					$title = $term instanceof \WP_Term
-						? $term->name
-						: __( 'Uncategorized', '4wp-faq' );
-
-					$hidden = ( '' !== $active && $slug !== $active );
-
-					$html .= '<section class="forwp-faq-list__group"' . self::context_attr( [ 'slug' => $slug ] ) . ' data-wp-bind--hidden="!state.isGroupVisible"' . ( $hidden ? ' hidden' : '' ) . '>';
-					$html .= '<h2 class="forwp-faq-list__group-title">' . esc_html( $title ) . '</h2>';
-					$html .= self::render_items( $posts, $card_attrs );
-					$html .= '</section>';
-				}
+				$html .= self::render_group_tree( $groups, $active, $seo_urls, $card_attrs );
 			}
 		}
 
@@ -296,7 +291,7 @@ class Display_Blocks {
 		$orientation      = isset( $attributes['orientation'] ) ? sanitize_key( (string) $attributes['orientation'] ) : 'vertical';
 		$show_all         = ! isset( $attributes['showAll'] ) || ! empty( $attributes['showAll'] );
 		$show_count       = ! isset( $attributes['showCount'] ) || ! empty( $attributes['showCount'] );
-		$seo_urls         = ! empty( $attributes['seoUrls'] );
+		$seo_urls         = Settings::is_seo_urls_enabled() && ! empty( $attributes['seoUrls'] );
 		$filters          = self::resolve_shared_term_filters(
 			$attributes['includeTermIds'] ?? [],
 			$attributes['excludeTermIds'] ?? []
@@ -331,7 +326,7 @@ class Display_Blocks {
 			);
 		}
 
-		$terms  = Registry_Content::get_nav_terms( $include_term_ids, $exclude_term_ids );
+		$terms  = Registry_Content::get_nav_tree( $include_term_ids, $exclude_term_ids );
 		$active = Faq_Filter::get_active_slug();
 
 		$html  = '<nav ' . $wrapper . ' aria-label="' . esc_attr( $nav_label ) . '">';
@@ -339,15 +334,11 @@ class Display_Blocks {
 		$html .= '<ul class="forwp-faq-categories__list">';
 
 		if ( $show_all ) {
-			$all_url = Faq_Filter::get_category_url( '', $seo_urls );
+			$all_url = Faq_Filter::get_nav_url( '', $seo_urls );
 			$html   .= self::render_category_item( '', $all_label, $all_url, $seo_urls, $active, null );
 		}
 
-		foreach ( $terms as $term ) {
-			$url   = Faq_Filter::get_category_url( $term->slug, $seo_urls );
-			$count = $show_count ? (int) $term->count : null;
-			$html .= self::render_category_item( $term->slug, $term->name, $url, $seo_urls, $active, $count );
-		}
+		$html .= self::render_category_nodes( $terms, $seo_urls, $active, $show_count );
 
 		$html .= '</ul>';
 
@@ -358,6 +349,121 @@ class Display_Blocks {
 		$html .= '</nav>';
 
 		return $html;
+	}
+
+	/**
+	 * Render 4WP FAQ Count (live number for All / category URL / search).
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string
+	 */
+	public static function render_count( $attributes ) {
+		unset( $attributes );
+
+		self::ensure_runtime();
+
+		$context = self::get_list_query_context();
+		$count   = Registry_Content::count_visible_posts(
+			$context['includeTermIds'],
+			$context['excludeTermIds'],
+			$context['activeSlug'],
+			$context['previewLimit'],
+			$context['layout']
+		);
+
+		$wrapper = get_block_wrapper_attributes(
+			[
+				'class'               => 'forwp-faq-count',
+				'data-wp-interactive' => self::STORE,
+				'data-wp-text'        => 'state.visibleCount',
+			]
+		);
+
+		return '<span ' . $wrapper . '>' . esc_html( (string) $count ) . '</span>';
+	}
+
+	/**
+	 * Shortcode [forwp_faq_count] — same live number as 4WP FAQ Count.
+	 *
+	 * @return string
+	 */
+	public static function shortcode_count() {
+		return self::render_count( [] );
+	}
+
+	/**
+	 * Include/exclude, layout, and preview settings for the current document.
+	 *
+	 * @return array{includeTermIds: int[], excludeTermIds: int[], layout: string, seoUrls: bool, activeSlug: string, previewLimit: int}
+	 */
+	public static function get_list_query_context() {
+		$filters = self::resolve_shared_term_filters( [], [] );
+		$layout  = 'grouped';
+		$seo     = false;
+
+		foreach ( self::get_document_contents() as $content ) {
+			self::inspect_display_blocks( parse_blocks( $content ), $layout, $seo );
+		}
+
+		$active = Faq_Filter::get_active_slug();
+
+		return [
+			'includeTermIds' => $filters['includeTermIds'],
+			'excludeTermIds' => $filters['excludeTermIds'],
+			'layout'         => $layout,
+			'seoUrls'        => Settings::is_seo_urls_enabled() && $seo,
+			'activeSlug'     => $active,
+			'previewLimit'   => '' === $active ? Settings::get_preview_per_category() : 0,
+		];
+	}
+
+	/**
+	 * Whether the current document contains a block.
+	 *
+	 * @param string $block_name Block name.
+	 * @return bool
+	 */
+	public static function document_has_block( $block_name ) {
+		foreach ( self::get_document_contents() as $content ) {
+			if ( has_block( $block_name, $content ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether 4WP FAQ Categories has SEO URLs enabled in this document.
+	 *
+	 * @return bool
+	 */
+	private static function document_uses_seo_urls() {
+		return ! empty( self::get_list_query_context()['seoUrls'] );
+	}
+
+	/**
+	 * @param array[] $blocks Parsed blocks.
+	 * @param string  $layout Layout found.
+	 * @param bool    $seo    SEO URLs found.
+	 */
+	private static function inspect_display_blocks( $blocks, &$layout, &$seo ) {
+		foreach ( $blocks as $block ) {
+			$name  = isset( $block['blockName'] ) ? (string) $block['blockName'] : '';
+			$attrs = isset( $block['attrs'] ) && is_array( $block['attrs'] ) ? $block['attrs'] : [];
+
+			if ( self::LIST_BLOCK === $name && ! empty( $attrs['layout'] ) ) {
+				$layout = sanitize_key( (string) $attrs['layout'] );
+			}
+
+			if ( self::CATEGORIES_BLOCK === $name && ! empty( $attrs['seoUrls'] ) ) {
+				$seo = true;
+			}
+
+			if ( ! empty( $block['innerBlocks'] ) && is_array( $block['innerBlocks'] ) ) {
+				self::inspect_display_blocks( $block['innerBlocks'], $layout, $seo );
+			}
+		}
 	}
 
 	/**
@@ -551,6 +657,65 @@ class Display_Blocks {
 	}
 
 	/**
+	 * Nested category groups (parent wraps children).
+	 *
+	 * @param array                $groups     Nested groups.
+	 * @param string               $active     Active slug.
+	 * @param bool                 $seo_urls   Pretty permalinks.
+	 * @param array<string, mixed> $card_attrs Card attributes.
+	 * @param string[]             $ancestors  Ancestor slugs.
+	 * @return string
+	 */
+	private static function render_group_tree( $groups, $active, $seo_urls, $card_attrs, $ancestors = [] ) {
+		$html = '';
+
+		foreach ( $groups as $group ) {
+			$posts    = isset( $group['posts'] ) && is_array( $group['posts'] ) ? $group['posts'] : [];
+			$children = isset( $group['children'] ) && is_array( $group['children'] ) ? $group['children'] : [];
+			if ( empty( $posts ) && empty( $children ) ) {
+				continue;
+			}
+
+			$term  = $group['term'] ?? null;
+			$slug  = $term instanceof \WP_Term ? $term->slug : '';
+			$title = $term instanceof \WP_Term
+				? Faq_Terms::get_display_title( $term )
+				: __( 'Uncategorized', '4wp-faq' );
+
+			$hidden      = ( '' !== $active && $slug !== $active && ! in_array( $active, $ancestors, true ) );
+			$is_child    = ! empty( $ancestors );
+			$truncated   = ! empty( $group['truncated'] );
+			$group_class = 'forwp-faq-list__group' . ( $is_child ? ' is-child' : '' );
+			$branch      = $ancestors;
+			if ( '' !== $slug ) {
+				$branch[] = $slug;
+			}
+
+			$html .= '<section class="' . esc_attr( $group_class ) . '"' . self::context_attr(
+				[
+					'slug'      => $slug,
+					'ancestors' => implode( ' ', $ancestors ),
+				]
+			) . ' data-wp-bind--hidden="!state.isGroupVisible"' . ( $hidden ? ' hidden' : '' ) . '>';
+			$html .= '<h2 class="forwp-faq-list__group-title">' . esc_html( $title ) . '</h2>';
+			if ( ! empty( $posts ) ) {
+				$html .= self::render_items( $posts, $card_attrs );
+				if ( $truncated && $term instanceof \WP_Term ) {
+					$html .= self::render_see_all( $term, $seo_urls, (int) ( $group['total'] ?? 0 ) );
+				}
+			}
+			if ( ! empty( $children ) ) {
+				$html .= '<div class="forwp-faq-list__children">';
+				$html .= self::render_group_tree( $children, $active, $seo_urls, $card_attrs, $branch );
+				$html .= '</div>';
+			}
+			$html .= '</section>';
+		}
+
+		return $html;
+	}
+
+	/**
 	 * @param \WP_Post[]           $posts      Registry posts.
 	 * @param array<string, mixed> $card_attrs Card attributes.
 	 * @return string
@@ -612,7 +777,7 @@ class Display_Blocks {
 		$answer     = Registry_Content::get_answer( $post_id );
 		$sources    = $show_sources ? Registry_Content::get_sources( $post_id ) : [];
 		$panel_id   = 'forwp-faq-card-panel-' . $post_id;
-		$term_slugs = Registry_Content::get_post_term_slugs( $post_id );
+		$term_slugs = Registry_Content::get_post_term_slugs_with_ancestors( $post_id );
 		$search     = strtolower( trim( $question . ' ' . ( $answer['text'] ?? '' ) ) );
 		$active     = Faq_Filter::get_active_slug();
 		$hidden     = ( '' !== $active && ! in_array( $active, $term_slugs, true ) );
@@ -705,17 +870,84 @@ class Display_Blocks {
 	}
 
 	/**
-	 * One category nav item.
+	 * Nested category nav items.
 	 *
-	 * @param string   $slug     Term slug (empty = all).
-	 * @param string   $label    Label.
-	 * @param string   $url      Href.
-	 * @param bool     $seo_urls Pretty permalinks.
-	 * @param string   $active   Active slug.
-	 * @param int|null $count    Optional count.
+	 * @param list<array{term: \WP_Term, children: array}> $nodes     Tree.
+	 * @param bool                                           $seo_urls Pretty permalinks.
+	 * @param string                                         $active   Active slug.
+	 * @param bool                                           $show_count Show counts.
 	 * @return string
 	 */
-	private static function render_category_item( $slug, $label, $url, $seo_urls, $active, $count ) {
+	private static function render_category_nodes( $nodes, $seo_urls, $active, $show_count ) {
+		$html = '';
+
+		foreach ( $nodes as $node ) {
+			$term = $node['term'] ?? null;
+			if ( ! $term instanceof \WP_Term ) {
+				continue;
+			}
+
+			$url      = Faq_Filter::get_nav_url( $term->slug, $seo_urls );
+			$count    = null;
+			if ( $show_count ) {
+				$count = isset( $node['inclusive_count'] ) ? (int) $node['inclusive_count'] : (int) $term->count;
+			}
+			$children = isset( $node['children'] ) && is_array( $node['children'] ) ? $node['children'] : [];
+			$inner    = '';
+
+			if ( ! empty( $children ) ) {
+				$inner  = '<ul class="forwp-faq-categories__children">';
+				$inner .= self::render_category_nodes( $children, $seo_urls, $active, $show_count );
+				$inner .= '</ul>';
+			}
+
+			$html .= self::render_category_item(
+				$term->slug,
+				$term->name,
+				$url,
+				$seo_urls,
+				$active,
+				$count,
+				$inner,
+				! empty( $children )
+			);
+		}
+
+		return $html;
+	}
+
+	/**
+	 * Link from a truncated All-view group to the full category.
+	 *
+	 * @param \WP_Term $term     Term.
+	 * @param bool     $seo_urls Pretty permalinks.
+	 * @param int      $total    Full count.
+	 * @return string
+	 */
+	private static function render_see_all( $term, $seo_urls, $total ) {
+		unset( $total );
+
+		$url = Faq_Filter::get_category_url( $term->slug, $seo_urls );
+		/* translators: %s: FAQ category name */
+		$label = sprintf( __( 'View all in %s', '4wp-faq' ), Faq_Terms::get_display_title( $term ) );
+
+		return '<p class="forwp-faq-list__more"><a class="forwp-faq-list__more-link" href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a></p>';
+	}
+
+	/**
+	 * One category nav item.
+	 *
+	 * @param string   $slug        Term slug (empty = all).
+	 * @param string   $label       Label.
+	 * @param string   $url         Href.
+	 * @param bool     $seo_urls    Pretty permalinks.
+	 * @param string   $active      Active slug.
+	 * @param int|null $count       Optional count.
+	 * @param string   $inner       Optional nested list HTML.
+	 * @param bool     $has_children Whether the item has children.
+	 * @return string
+	 */
+	private static function render_category_item( $slug, $label, $url, $seo_urls, $active, $count, $inner = '', $has_children = false ) {
 		$is_active = ( $slug === $active );
 		$context   = self::context_attr(
 			[
@@ -725,13 +957,23 @@ class Display_Blocks {
 			]
 		);
 
-		$html  = '<li class="forwp-faq-categories__item' . ( $is_active ? ' is-active' : '' ) . '"' . $context . ' data-wp-class--is-active="state.isNavActive">';
+		$classes = 'forwp-faq-categories__item';
+		if ( $is_active ) {
+			$classes .= ' is-active';
+		}
+		if ( $has_children ) {
+			$classes .= ' has-children';
+		}
+
+		$html  = '<li class="' . esc_attr( $classes ) . '"' . $context . ' data-wp-class--is-active="state.isNavActive">';
 		$html .= '<a class="forwp-faq-categories__link" href="' . esc_url( $url ) . '" data-faq-cat="' . esc_attr( $slug ) . '" data-wp-on--click="actions.selectCategory">';
 		$html .= '<span class="forwp-faq-categories__term">' . esc_html( $label ) . '</span>';
 		if ( null !== $count ) {
 			$html .= '<span class="forwp-faq-categories__count">' . esc_html( (string) $count ) . '</span>';
 		}
-		$html .= '</a></li>';
+		$html .= '</a>';
+		$html .= $inner;
+		$html .= '</li>';
 
 		return $html;
 	}
@@ -750,12 +992,22 @@ class Display_Blocks {
 			return;
 		}
 
+		$context = self::get_list_query_context();
+		$count   = Registry_Content::count_visible_posts(
+			$context['includeTermIds'],
+			$context['excludeTermIds'],
+			$context['activeSlug'],
+			$context['previewLimit'],
+			$context['layout']
+		);
+
 		$done = true;
 		wp_interactivity_state(
 			self::STORE,
 			[
-				'category'       => Faq_Filter::get_active_slug(),
+				'category'       => $context['activeSlug'],
 				'search'         => '',
+				'visibleCount'   => $count,
 				'isNavActive'    => static function () {
 					$state    = wp_interactivity_state( 'forwp/faq' );
 					$context  = wp_interactivity_get_context( 'forwp/faq' );
@@ -772,7 +1024,10 @@ class Display_Blocks {
 						return true;
 					}
 
-					return ( isset( $context['slug'] ) ? (string) $context['slug'] : '' ) === $category;
+					$slug      = isset( $context['slug'] ) ? (string) $context['slug'] : '';
+					$ancestors = isset( $context['ancestors'] ) ? preg_split( '/\s+/', (string) $context['ancestors'], -1, PREG_SPLIT_NO_EMPTY ) : [];
+
+					return $slug === $category || in_array( $category, $ancestors, true );
 				},
 				'isItemVisible'  => static function () {
 					$state    = wp_interactivity_state( 'forwp/faq' );

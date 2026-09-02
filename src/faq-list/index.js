@@ -192,6 +192,7 @@ registerBlockType( 'forwp/faq-list', {
 											includeTermIds: namesToIds( tokens, terms ),
 										} )
 									}
+									__experimentalExpandOnFocus
 									__nextHasNoMarginBottom
 								/>
 								<p className="forwp-faq-list-editor__help">
@@ -209,6 +210,7 @@ registerBlockType( 'forwp/faq-list', {
 											excludeTermIds: namesToIds( tokens, terms ),
 										} )
 									}
+									__experimentalExpandOnFocus
 									__nextHasNoMarginBottom
 								/>
 							</>

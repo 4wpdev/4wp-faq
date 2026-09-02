@@ -14,6 +14,7 @@ module.exports = {
 		'faq-list': './src/faq-list/index.js',
 		'faq-card': './src/faq-card/index.js',
 		'faq-categories': './src/faq-categories/index.js',
+		'faq-count': './src/faq-count/index.js',
 		setup: './src/admin/setup/index.js',
 		'admin/index': path.resolve( __dirname, 'src/admin/index.js' ),
 	},

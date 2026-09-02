@@ -48,11 +48,7 @@ class Yoast {
 			return $graph;
 		}
 
-		if ( ! has_block( Plugin::BLOCK_NAME, $post ) ) {
-			return $graph;
-		}
-
-		$entities = Plugin::collect_schema_entities_for_post( $post );
+		$entities = Plugin::collect_schema_entities_for_current_view( $post );
 		if ( empty( $entities ) ) {
 			return $graph;
 		}

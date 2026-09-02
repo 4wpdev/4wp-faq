@@ -49,5 +49,8 @@
 			"type": "boolean",
 			"default": false
 		}
-	}
+	},
+	"editorScript": "file:../../build/faq-list.js",
+	"style": "file:../../build/style-faq-list.css",
+	"editorStyle": "file:../../build/style-faq-list.css"
 }

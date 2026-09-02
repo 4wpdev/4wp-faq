@@ -102,6 +102,28 @@ class Faq_Filter {
 	}
 
 	/**
+	 * Pretty /page/term-slug/ request (Settings on). Query-string ?faq_cat= is not SEO.
+	 *
+	 * @return bool
+	 */
+	public static function is_pretty_category_request() {
+		if ( ! Settings::is_seo_urls_enabled() ) {
+			return false;
+		}
+
+		$wp      = isset( $GLOBALS['wp'] ) ? $GLOBALS['wp'] : null;
+		$request = $wp instanceof \WP ? trim( (string) $wp->request, '/' ) : '';
+		if ( '' === $request || false === strpos( $request, '/' ) ) {
+			return false;
+		}
+
+		$parts    = explode( '/', $request );
+		$cat_slug = sanitize_title( (string) end( $parts ) );
+
+		return '' !== $cat_slug && self::is_category_slug( $cat_slug );
+	}
+
+	/**
 	 * Active category slug from the request.
 	 *
 	 * @return string
@@ -125,9 +147,27 @@ class Faq_Filter {
 	}
 
 	/**
-	 * URL for a category on the current host page/post.
+	 * Nav href: pretty permalink when SEO URLs are on, otherwise the host page (in-place filter).
 	 *
-	 * @param string $slug    Term slug (empty = all).
+	 * @param string $slug     Term slug (empty = all).
+	 * @param bool   $seo_urls Pretty one-level permalinks.
+	 * @return string
+	 */
+	public static function get_nav_url( $slug, $seo_urls ) {
+		$base = self::get_host_permalink();
+		$slug = sanitize_title( (string) $slug );
+
+		if ( '' === $slug || ! $seo_urls || ! Settings::is_seo_urls_enabled() ) {
+			return $base;
+		}
+
+		return trailingslashit( $base ) . rawurlencode( $slug ) . '/';
+	}
+
+	/**
+	 * Full-category URL (View all / shareable). Pretty when SEO URLs are on, else ?faq_cat=.
+	 *
+	 * @param string $slug     Term slug (empty = all).
 	 * @param bool   $seo_urls Pretty one-level permalinks.
 	 * @return string
 	 */
@@ -135,11 +175,15 @@ class Faq_Filter {
 		$base = self::get_host_permalink();
 		$slug = sanitize_title( (string) $slug );
 
-		if ( ! $seo_urls || '' === $slug ) {
+		if ( '' === $slug ) {
 			return $base;
 		}
 
-		return trailingslashit( $base ) . rawurlencode( $slug ) . '/';
+		if ( $seo_urls && Settings::is_seo_urls_enabled() ) {
+			return trailingslashit( $base ) . rawurlencode( $slug ) . '/';
+		}
+
+		return add_query_arg( self::QUERY_VAR, $slug, $base );
 	}
 
 	/**

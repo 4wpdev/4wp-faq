@@ -48,9 +48,10 @@ These blocks read the FAQ registry CPT, not the in-place Accordion. Typical layo
 
 | Block | Name | Role |
 |---|---|---|
-| **4WP FAQ List** | `forwp/faq-list` | Renders registry questions, grouped by category or as a single list. Include/exclude taxonomy terms. |
+| **4WP FAQ List** | `forwp/faq-list` | Renders registry questions, grouped by category (primary term, hierarchy order) or as a single list. Include/exclude taxonomy terms. All view shows N questions per group (Settings) plus a link to the category. |
 | **4WP FAQ Card** | `forwp/faq-card` | Inner block of the List (`inserter: false`). Accordion or heading + description. Optional source links (“Used in”), optional post-type label. |
-| **4WP FAQ Categories** | `forwp/faq-categories` | Vertical or horizontal nav. Click a category to filter the List in place (Interactivity). |
+| **4WP FAQ Categories** | `forwp/faq-categories` | Vertical or horizontal nav as a parent → child tree. Links load the category URL (pretty `/page/slug/` or `?faq_cat=`). |
+| **4WP FAQ Count** | `forwp/faq-count` | Live number: All (preview), current category URL, or current search. Same output as `[forwp_faq_count]`. |
 
 ### Shared category filters
 
@@ -59,7 +60,7 @@ List and Categories **share include/exclude**. They stay in sync even when they 
 - If the List includes two categories, the nav shows those two.
 - If the nav includes more, the List includes those too.
 - Empty include on one side inherits the other. Empty on both = all categories.
-- **All categories** in the nav (toggle + replaceable label, default “All categories”) shows the **full synced list**, not every FAQ on the site.
+- **All categories** in the nav (toggle + replaceable label, default “All categories”) shows a **preview** of each group (N from Settings, default 5) plus “View all in {category}”. The category URL lists every question in that group.
 
 On the front end, PHP also unions non-empty includes from both blocks in the same page/template so an older save (List = 2, nav = all) cannot list a category that was never queried.
 
@@ -78,7 +79,8 @@ Set on the inner **4WP FAQ Card** (copied to the List for editor preview):
 - **Label** — heading above the links (default `Categories`)
 - **Show “All categories”** — on by default; label is editable
 - **Show counts** — term counts next to each link
-- **SEO-friendly category URLs** — off: filter in place, URL unchanged. On: one extra path segment after the current page (`/faq/term-slug/`)
+- **SEO-friendly category URLs** — on: `/faq/term-slug/` uses the category Display title as H1 and the category SEO title/description as document meta; JSON-LD is only that category. Off: `?faq_cat=slug` still loads the full category list.
+- Drag the FAQ category rows on `edit-tags.php` to set front-end order.
 
 ### Related Search
 
@@ -124,7 +126,7 @@ npm install && npm run build
 ## For developers
 
 - **Namespace:** `ForWP\FAQ`
-- **Blocks:** `forwp/faq`, `forwp/faq-list`, `forwp/faq-card`, `forwp/faq-categories` · **Text domain:** `4wp-faq`
+- **Blocks:** `forwp/faq`, `forwp/faq-list`, `forwp/faq-card`, `forwp/faq-categories`, `forwp/faq-count` · **Text domain:** `4wp-faq`
 - **REST:** `forwp-faq/v1` (settings, registry scan, setup)
 - **Build:** `npm run build` → `build/` (block editor + admin React screens)
 

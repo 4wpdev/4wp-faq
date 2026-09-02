@@ -13,6 +13,7 @@ import {
 	Notice,
 	ExternalLink,
 	ToggleControl,
+	RangeControl,
 	Modal,
 } from '@wordpress/components';
 
@@ -182,6 +183,59 @@ function SettingsTab() {
 			.finally( () => setSavingSeo( false ) );
 	};
 
+	const onToggleSeoUrls = ( enabled ) => {
+		setSavingSeo( true );
+		setError( '' );
+		apiFetch( {
+			path: SETTINGS_PATH,
+			method: 'POST',
+			data: { seo_urls: enabled },
+		} )
+			.then( ( response ) => {
+				setSettings( response );
+				setNotice(
+					enabled
+						? __(
+								'Pretty category URLs enabled. Turn on SEO-friendly category URLs in the 4WP FAQ Categories block on each hub page.',
+								'4wp-faq'
+						  )
+						: __(
+								'Pretty category URLs disabled. Category clicks filter in place and the page URL stays unchanged.',
+								'4wp-faq'
+						  )
+				);
+			} )
+			.catch( ( e ) => {
+				setError(
+					e?.message ||
+						__( 'Could not save SEO setting.', '4wp-faq' )
+				);
+			} )
+			.finally( () => setSavingSeo( false ) );
+	};
+
+	const onPreviewPerCategory = ( value ) => {
+		const next = typeof value === 'number' ? value : 5;
+		setSavingSeo( true );
+		setError( '' );
+		apiFetch( {
+			path: SETTINGS_PATH,
+			method: 'POST',
+			data: { preview_per_category: next },
+		} )
+			.then( ( response ) => {
+				setSettings( response );
+				setNotice( __( 'Preview count saved.', '4wp-faq' ) );
+			} )
+			.catch( ( e ) => {
+				setError(
+					e?.message ||
+						__( 'Could not save setting.', '4wp-faq' )
+				);
+			} )
+			.finally( () => setSavingSeo( false ) );
+	};
+
 	const onConfirmReset = () => {
 		setResetting( true );
 		setError( '' );
@@ -213,6 +267,8 @@ function SettingsTab() {
 	const setupComplete = registry?.setup_complete;
 	const stats = registry?.stats;
 	const jsonLdOn = settings?.output_json_ld === true;
+	const previewPer = settings?.preview_per_category || 5;
+	const seoUrlsOn = settings?.seo_urls === true;
 
 	return (
 		<div className="forwp-faq-settings-layout">
@@ -293,17 +349,51 @@ function SettingsTab() {
 						help={
 							jsonLdOn
 								? __(
-										'When enabled, JSON-LD is generated automatically for all 4WP FAQ blocks. You can turn it off per block in the block sidebar.',
+										'JSON-LD lists the questions actually on the page. On a FAQ hub, All categories uses the preview count below; a category URL outputs only that category. Wrapper blocks still follow the per-block sidebar override.',
 										'4wp-faq'
 								  )
 								: __(
-										'When disabled, JSON-LD is off by default. You can enable it for individual blocks in the block sidebar. Recommended for SEO when you want structured data site-wide.',
+										'When disabled, JSON-LD is off by default. You can enable it for individual wrapper blocks in the block sidebar. Recommended for SEO when you want structured data site-wide.',
 										'4wp-faq'
 								  )
 						}
 						checked={ jsonLdOn }
 						disabled={ savingSeo }
 						onChange={ onToggleJsonLd }
+					/>
+
+					<ToggleControl
+						label={ __(
+							'SEO: pretty category URLs',
+							'4wp-faq'
+						) }
+						help={
+							seoUrlsOn
+								? __(
+										'Allows /current-page/term-slug/ permalinks. Each 4WP FAQ Categories block still needs “SEO-friendly category URLs” turned on. That URL uses the category Display title as H1 and the category SEO title/description as document meta. JSON-LD is only the questions in that category.',
+										'4wp-faq'
+								  )
+								: __(
+										'Off (recommended until permalinks are confirmed). Category clicks filter the list in place; the page URL does not change. ?faq_cat=slug still loads a category if opened directly.',
+										'4wp-faq'
+								  )
+						}
+						checked={ seoUrlsOn }
+						disabled={ savingSeo }
+						onChange={ onToggleSeoUrls }
+					/>
+
+					<RangeControl
+						label={ __( 'All categories: questions per group', '4wp-faq' ) }
+						help={ __(
+							'On the All-categories view, each group shows this many questions plus a link to the category. Category URLs still list every question in that category.',
+							'4wp-faq'
+						) }
+						value={ previewPer }
+						onChange={ onPreviewPerCategory }
+						min={ 1 }
+						max={ 20 }
+						disabled={ savingSeo }
 					/>
 
 					{ setupComplete ? (

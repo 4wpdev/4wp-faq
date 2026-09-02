@@ -17,6 +17,14 @@ class Settings {
 	/** When true, FAQPage JSON-LD is output unless a block opts out. */
 	public const OPTION_OUTPUT_JSON_LD = 'forwp_faq_output_json_ld';
 
+	/** Questions shown per category on the All view. */
+	public const OPTION_PREVIEW_PER_CATEGORY = 'forwp_faq_preview_per_category';
+
+	/** Pretty /current-page/term-slug/ category URLs. Off: in-place filter, URL unchanged. */
+	public const OPTION_SEO_URLS = 'forwp_faq_seo_urls';
+
+	public const DEFAULT_PREVIEW_PER_CATEGORY = 5;
+
 	public const STATUS_PENDING  = 'pending';
 	public const STATUS_COMPLETE = 'complete';
 	public const STATUS_SKIPPED  = 'skipped';
@@ -122,6 +130,45 @@ class Settings {
 	 */
 	public static function set_output_json_ld( $enabled ) {
 		update_option( self::OPTION_OUTPUT_JSON_LD, $enabled ? 1 : 0 );
+	}
+
+	/**
+	 * How many questions to show per category on the All-categories view.
+	 */
+	public static function get_preview_per_category() {
+		$value = (int) get_option( self::OPTION_PREVIEW_PER_CATEGORY, self::DEFAULT_PREVIEW_PER_CATEGORY );
+		if ( $value < 1 ) {
+			return self::DEFAULT_PREVIEW_PER_CATEGORY;
+		}
+
+		return min( 50, $value );
+	}
+
+	/**
+	 * @param int $limit Questions per category on All view.
+	 */
+	public static function set_preview_per_category( $limit ) {
+		$limit = (int) $limit;
+		if ( $limit < 1 ) {
+			$limit = self::DEFAULT_PREVIEW_PER_CATEGORY;
+		}
+
+		update_option( self::OPTION_PREVIEW_PER_CATEGORY, min( 50, $limit ) );
+	}
+
+	/**
+	 * Site-wide pretty category permalinks (/page/term-slug/).
+	 * The Categories block still has its own SEO URLs toggle; both must be on.
+	 */
+	public static function is_seo_urls_enabled() {
+		return (bool) get_option( self::OPTION_SEO_URLS, false );
+	}
+
+	/**
+	 * @param bool $enabled Whether pretty category URLs are allowed site-wide.
+	 */
+	public static function set_seo_urls( $enabled ) {
+		update_option( self::OPTION_SEO_URLS, $enabled ? 1 : 0 );
 	}
 
 	/**

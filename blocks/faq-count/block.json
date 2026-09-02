@@ -1,0 +1,17 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "forwp/faq-count",
+	"title": "4WP FAQ Count",
+	"category": "widgets",
+	"icon": "editor-ol",
+	"description": "Live count of FAQ questions on this page: all, the current category URL, or the current search.",
+	"keywords": ["faq", "count", "4wp"],
+	"textdomain": "4wp-faq",
+	"supports": {
+		"html": false,
+		"className": true,
+		"interactivity": true
+	},
+	"editorScript": "file:../../build/faq-count.js"
+}

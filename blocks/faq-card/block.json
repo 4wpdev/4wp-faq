@@ -33,5 +33,8 @@
 			"type": "boolean",
 			"default": false
 		}
-	}
+	},
+	"editorScript": "file:../../build/faq-card.js",
+	"style": "file:../../build/style-faq-card.css",
+	"editorStyle": "file:../../build/style-faq-card.css"
 }
