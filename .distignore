@@ -19,5 +19,7 @@ docs/
 README.md
 TEMP.md
 scripts/
+.wordpress-org/
+assets/images/
 
 .cursor/
