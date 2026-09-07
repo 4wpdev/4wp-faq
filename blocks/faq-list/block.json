@@ -48,6 +48,14 @@
 		"cardShowPostType": {
 			"type": "boolean",
 			"default": false
+		},
+		"cardQuestionStyle": {
+			"type": "object",
+			"default": {}
+		},
+		"cardAnswerStyle": {
+			"type": "object",
+			"default": {}
 		}
 	},
 	"editorScript": "file:../../build/faq-list.js",

@@ -49,7 +49,7 @@ function StatCell( { label, value, hint } ) {
 	);
 }
 
-function StatsCard( { stats, setupComplete } ) {
+function StatsCard( { stats, setupComplete, lastScan } ) {
 	if ( ! stats ) {
 		return null;
 	}
@@ -62,43 +62,35 @@ function StatsCard( { stats, setupComplete } ) {
 			<CardBody>
 				<div className="forwp-faq-stats-grid">
 					<StatCell
-						label={ __( 'Unique questions (registry)', '4wp-faq' ) }
+						label={ __( 'Questions', '4wp-faq' ) }
 						value={ setupComplete ? stats.total_questions : '—' }
-						hint={
-							setupComplete
-								? __( 'After last scan', '4wp-faq' )
-								: __( 'Enable registry setup', '4wp-faq' )
-						}
 					/>
 					<StatCell
-						label={ __( 'Reused on multiple pages', '4wp-faq' ) }
+						label={ __( 'Categories', '4wp-faq' ) }
+						value={ setupComplete ? stats.faq_categories : '—' }
+					/>
+					<StatCell
+						label={ __( 'Reused', '4wp-faq' ) }
 						value={ setupComplete ? stats.reused_questions : '—' }
 					/>
 					<StatCell
-						label={ __( 'FAQ items in content', '4wp-faq' ) }
+						label={ __( 'Items in content', '4wp-faq' ) }
 						value={ stats.faq_items_in_content }
-					/>
-					<StatCell
-						label={ __( '4WP FAQ blocks', '4wp-faq' ) }
-						value={ stats.faq_blocks }
 					/>
 					<StatCell
 						label={ __( 'Pages with FAQ', '4wp-faq' ) }
 						value={ stats.pages_with_faq }
 					/>
-					<StatCell
-						label={ __( 'Posts with FAQ', '4wp-faq' ) }
-						value={ stats.posts_with_faq }
-					/>
-					<StatCell
-						label={ __( 'Other content types', '4wp-faq' ) }
-						value={ stats.other_content_with_faq }
-					/>
-					<StatCell
-						label={ __( 'FAQ categories', '4wp-faq' ) }
-						value={ setupComplete ? stats.faq_categories : '—' }
-					/>
 				</div>
+				{ lastScan ? (
+					<p className="forwp-faq-actions-card__meta">
+						{ sprintf(
+							/* translators: %s: date/time */
+							__( 'Last scan: %s', '4wp-faq' ),
+							lastScan
+						) }
+					</p>
+				) : null }
 			</CardBody>
 		</Card>
 	);
@@ -265,7 +257,6 @@ function SettingsTab() {
 	}
 
 	const setupComplete = registry?.setup_complete;
-	const stats = registry?.stats;
 	const jsonLdOn = settings?.output_json_ld === true;
 	const previewPer = settings?.preview_per_category || 5;
 	const seoUrlsOn = settings?.seo_urls === true;
@@ -287,11 +278,15 @@ function SettingsTab() {
 				</Notice>
 			) : null }
 
-			<StatsCard stats={ stats } setupComplete={ setupComplete } />
+			<StatsCard
+				stats={ registry?.stats }
+				setupComplete={ setupComplete }
+				lastScan={ registry?.last_scan_label }
+			/>
 
 			<Card className="forwp-faq-actions-card">
 				<CardHeader>
-					<h2>{ __( 'Actions', '4wp-faq' ) }</h2>
+					<h2>{ __( 'Settings', '4wp-faq' ) }</h2>
 				</CardHeader>
 				<CardBody>
 					<div className="forwp-faq-actions-row">
@@ -322,71 +317,34 @@ function SettingsTab() {
 						</p>
 					) : null }
 
-					{ setupComplete && registry?.registry_url ? (
-						<p>
-							<ExternalLink href={ registry.registry_url }>
-								{ __( 'View all FAQ entries', '4wp-faq' ) }
-							</ExternalLink>
-							{ registry.post_type ? (
-								<span className="forwp-faq-actions-card__meta">
-									{ ' ' }
-									(
-									{ sprintf(
-										/* translators: %s: post type slug */
-										__( 'post type: %s', '4wp-faq' ),
-										registry.post_type
-									) }
-									)
-								</span>
-							) : null }
-						</p>
-					) : null }
-
 					<hr className="forwp-faq-actions-divider" />
 
 					<ToggleControl
-						label={ __( 'SEO: FAQPage JSON-LD', '4wp-faq' ) }
-						help={
-							jsonLdOn
-								? __(
-										'JSON-LD lists the questions actually on the page. On a FAQ hub, All categories uses the preview count below; a category URL outputs only that category. Wrapper blocks still follow the per-block sidebar override.',
-										'4wp-faq'
-								  )
-								: __(
-										'When disabled, JSON-LD is off by default. You can enable it for individual wrapper blocks in the block sidebar. Recommended for SEO when you want structured data site-wide.',
-										'4wp-faq'
-								  )
-						}
+						label={ __( 'FAQPage JSON-LD', '4wp-faq' ) }
+						help={ __(
+							'On: schema for questions actually shown. Per-block override still applies.',
+							'4wp-faq'
+						) }
 						checked={ jsonLdOn }
 						disabled={ savingSeo }
 						onChange={ onToggleJsonLd }
 					/>
 
 					<ToggleControl
-						label={ __(
-							'SEO: pretty category URLs',
+						label={ __( 'Pretty category URLs', '4wp-faq' ) }
+						help={ __(
+							'Allows /page/term-slug/. Also enable it on the Categories block. Off: in-place filter, URL unchanged.',
 							'4wp-faq'
 						) }
-						help={
-							seoUrlsOn
-								? __(
-										'Allows /current-page/term-slug/ permalinks. Each 4WP FAQ Categories block still needs “SEO-friendly category URLs” turned on. That URL uses the category Display title as H1 and the category SEO title/description as document meta. JSON-LD is only the questions in that category.',
-										'4wp-faq'
-								  )
-								: __(
-										'Off (recommended until permalinks are confirmed). Category clicks filter the list in place; the page URL does not change. ?faq_cat=slug still loads a category if opened directly.',
-										'4wp-faq'
-								  )
-						}
 						checked={ seoUrlsOn }
 						disabled={ savingSeo }
 						onChange={ onToggleSeoUrls }
 					/>
 
 					<RangeControl
-						label={ __( 'All categories: questions per group', '4wp-faq' ) }
+						label={ __( 'Questions per group (All view)', '4wp-faq' ) }
 						help={ __(
-							'On the All-categories view, each group shows this many questions plus a link to the category. Category URLs still list every question in that category.',
+							'Preview count on All categories. Category URLs still list every question.',
 							'4wp-faq'
 						) }
 						value={ previewPer }
@@ -401,7 +359,7 @@ function SettingsTab() {
 							<hr className="forwp-faq-actions-divider" />
 							<p className="forwp-faq-reset-intro">
 								{ __(
-									'Run setup again to change registry post type or taxonomy slugs.',
+									'Reset setup to change CPT/taxonomy slugs. Categories are removed.',
 									'4wp-faq'
 								) }
 							</p>
@@ -414,6 +372,46 @@ function SettingsTab() {
 							</Button>
 						</>
 					) : null }
+				</CardBody>
+			</Card>
+
+			<Card className="forwp-faq-actions-card">
+				<CardHeader>
+					<h2>{ __( 'Category titles', '4wp-faq' ) }</h2>
+				</CardHeader>
+				<CardBody>
+					<p>
+						{ __(
+							'On pretty category URLs (/page/term-slug/). Edit fields on each FAQ category.',
+							'4wp-faq'
+						) }
+					</p>
+					<ul className="forwp-faq-doc-list">
+						<li>
+							<strong>{ __( 'H1', '4wp-faq' ) }</strong>
+							{ ' — ' }
+							{ __(
+								'Display title. Empty: category name.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>{ __( 'Document title', '4wp-faq' ) }</strong>
+							{ ' — ' }
+							{ __(
+								'SEO title as-is if filled (no site-name suffix). Empty: H1 + “ – {site name}”.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>{ __( 'Meta description', '4wp-faq' ) }</strong>
+							{ ' — ' }
+							{ __(
+								'SEO description. Empty: hub page default.',
+								'4wp-faq'
+							) }
+						</li>
+					</ul>
 				</CardBody>
 			</Card>
 
@@ -486,26 +484,26 @@ function DocumentationTab() {
 			<DocSection title={ __( 'Convert to FAQ', '4wp-faq' ) }>
 				<p>
 					{ __(
-						'You can convert an existing Accordion, Accordion Item, or Accordion Group into a 4WP FAQ block without rebuilding the layout.',
+						'You can convert an existing Accordion, Accordion Item, Accordion Group, Details, List, or heading + paragraph pairs into a 4WP FAQ block without rebuilding the layout.',
 						'4wp-faq'
 					) }
 				</p>
 				<ol className="forwp-faq-doc-list">
 					<li>
 						{ __(
-							'Select a core Accordion, Accordion Item, or Accordion Group in the editor.',
+							'Select a core Accordion, Accordion Item, Accordion Group, Details, or List in the editor. You can select several Details or Accordion Items at once.',
 							'4wp-faq'
 						) }
 					</li>
 					<li>
 						{ __(
-							'In the block toolbar, click Convert to FAQ (help icon).',
+							'In the block toolbar, click Convert to 4WP FAQ, or use Transform to → 4WP FAQ.',
 							'4wp-faq'
 						) }
 					</li>
 					<li>
 						{ __(
-							'The plugin wraps your markup in forwp/faq. Inner Accordion blocks and styling stay the same on the front end.',
+							'The plugin wraps your markup in forwp/faq. Inner Accordion or Details blocks and styling stay the same on the front end.',
 							'4wp-faq'
 						) }
 					</li>
@@ -535,27 +533,106 @@ function DocumentationTab() {
 						'4wp-faq'
 					) }
 				</p>
+			</DocSection>
+
+			<DocSection title={ __( 'Blocks for pages', '4wp-faq' ) }>
 				<p>
-					<strong>{ __( 'Question & answer', '4wp-faq' ) }</strong>
-					{ ' — ' }
 					{ __(
-						'For Accordion Item, the heading (or title attribute) is the question; panel inner blocks are the answer. For Details, summary is the question and inner content is the answer.',
+						'Use these blocks when building a FAQ hub or in-page FAQs:',
 						'4wp-faq'
 					) }
 				</p>
+				<ul className="forwp-faq-doc-list">
+					<li>
+						<strong>forwp/faq</strong>
+						{ ' — ' }
+						{ __(
+							'Wrapper around core Accordion or Details for JSON-LD and registry scan. Convert / Transform to 4WP FAQ in the editor.',
+							'4wp-faq'
+						) }
+					</li>
+					<li>
+						<strong>forwp/faq-list</strong>
+						{ ' — ' }
+						{ __(
+							'Registry glossary (grouped or flat). Place on a page or template after setup + scan.',
+							'4wp-faq'
+						) }
+					</li>
+					<li>
+						<strong>forwp/faq-card</strong>
+						{ ' — ' }
+						{ __(
+							'Inner template of the List (not in the inserter). Accordion or heading + answer; optional sources.',
+							'4wp-faq'
+						) }
+					</li>
+					<li>
+						<strong>forwp/faq-categories</strong>
+						{ ' — ' }
+						{ __(
+							'Category nav. Include/exclude stay in sync with the List on the same page.',
+							'4wp-faq'
+						) }
+					</li>
+					<li>
+						<strong>forwp/faq-count</strong>
+						{ ' — ' }
+						{ __(
+							'Live number for All / current category / current search. Same as [forwp_faq_count].',
+							'4wp-faq'
+						) }
+					</li>
+				</ul>
+				<pre className="forwp-faq-doc-pre">
+					<code>{ `forwp/faq-categories         ← nav (optional)
+forwp/faq-list               ← registry questions
+└── forwp/faq-card
+core/search                  ← optional filter
+forwp/faq-count              ← optional count` }</code>
+				</pre>
 			</DocSection>
 
-			<DocSection title={ __( 'JSON-LD (SEO)', '4wp-faq' ) }>
+			<DocSection title={ __( 'Core Search block', '4wp-faq' ) }>
 				<p>
 					{ __(
-						'On singular posts and pages, the plugin can output FAQPage structured data (JSON-LD) in the footer when FAQ blocks are present.',
+						'Add a core Search block on the same page as 4WP FAQ List. In the block sidebar open 4WP FAQ and turn on Filter 4WP FAQ List.',
 						'4wp-faq'
 					) }
 				</p>
 				<ul className="forwp-faq-doc-list">
 					<li>
 						{ __(
-							'Site-wide default: Settings tab → SEO: FAQPage JSON-LD (off by default; enabling is recommended for SEO).',
+							'Typing filters visible FAQ cards through the Interactivity store. The form does not submit a WordPress search.',
+							'4wp-faq'
+						) }
+					</li>
+					<li>
+						{ __(
+							'FAQ Count follows the same search query when the filter is on.',
+							'4wp-faq'
+						) }
+					</li>
+					<li>
+						{ __(
+							'Leave the toggle off if the Search should behave as a normal site search.',
+							'4wp-faq'
+						) }
+					</li>
+				</ul>
+			</DocSection>
+
+			<DocSection title={ __( 'JSON-LD (SEO)', '4wp-faq' ) }>
+				<p>
+					{ __(
+						'On singular posts and pages, the plugin can output FAQPage structured data (JSON-LD) in the document head when FAQ blocks are present.',
+						'4wp-faq'
+					) }
+				</p>
+				<ul className="forwp-faq-doc-list">
+					<li>
+						{ __(
+							'Site-wide default: Settings → FAQPage JSON-LD (off by default).',
 							'4wp-faq'
 						) }
 					</li>
@@ -636,7 +713,7 @@ function DocumentationTab() {
 					</li>
 					<li>
 						{ __(
-							'Review Overview stats and open FAQ entries under the FAQ admin menu.',
+							'Review Dashboard stats and open All FAQs under the FAQ admin menu.',
 							'4wp-faq'
 						) }
 					</li>

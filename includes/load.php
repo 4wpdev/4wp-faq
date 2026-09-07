@@ -31,6 +31,7 @@ function get_required_include_files(): array {
 		'includes/class-setup-wizard.php',
 		'includes/class-setup-rest.php',
 		'includes/class-dashboard-setup.php',
+		'includes/class-admin-dashboard.php',
 		'includes/class-admin-settings.php',
 		'includes/class-admin-rest.php',
 		'includes/class-plugin.php',

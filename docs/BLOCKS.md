@@ -17,12 +17,14 @@ forwp/faq                    ← 4WP FAQ wrapper (Convert to FAQ)
 **Editor flow**
 
 1. Add **Accordion** and **Accordion Item** blocks (or select an existing Accordion).
-2. Use **Convert to FAQ** on the Accordion or Accordion Item toolbar — the plugin inserts `forwp/faq` above and keeps your markup.
-3. Each **Accordion Item** becomes one FAQ entry for JSON-LD and (when enabled) the FAQ registry scan.
+2. Use **Convert to FAQ** on the Accordion or Accordion Item toolbar, or **Transform to → 4WP FAQ**. The plugin inserts `forwp/faq` above and keeps your markup.
+3. You can also select one or more **Details** or **Accordion Item** blocks (or heading + paragraph pairs) and convert them in one step.
+4. Each **Accordion Item** (or Details block) becomes one FAQ entry for JSON-LD and (when enabled) the FAQ registry scan.
 
 **Also accepted**
 
 - `core/accordion-group` — can be transformed into `forwp/faq` + `core/accordion` like a plain Accordion.
+- Multiple `core/details` — wrapped as-is inside `forwp/faq`.
 - Multiple `forwp/faq` blocks on one page are allowed (e.g. “FAQ” and “Faq 2” sections).
 
 ## Legacy / alternative: Details
@@ -59,10 +61,18 @@ forwp/faq-list
 | Block | Name | Notes |
 |---|---|---|
 | 4WP FAQ List | `forwp/faq-list` | Grouped or flat. Include/exclude are **shared** with Categories on the same page. |
-| 4WP FAQ Card | `forwp/faq-card` | Parent: List only. Accordion or heading; optional sources. |
+| 4WP FAQ Card | `forwp/faq-card` | Parent: List only. Accordion or heading; optional sources; Question / Answer typography (font, size, weight, color). |
 | 4WP FAQ Categories | `forwp/faq-categories` | Nav + Interactivity filter. **All categories** = full synced list (editable label). |
 
 PHP: `includes/class-display-blocks.php`, `includes/class-registry-content.php`, `includes/class-faq-filter.php`. Editor: `src/faq-list/`, `src/faq-card/`, `src/faq-categories/`, `src/display/sync-filters.js`. Front-end store: `assets/faq-view.js`.
+
+## Core Search (`core/search`)
+
+On the same page as **4WP FAQ List**, add a core **Search** block. In the inspector: **4WP FAQ → Filter 4WP FAQ List**.
+
+- Filters visible cards through the Interactivity store (`forwp/faq`). Does **not** submit a WordPress search.
+- **4WP FAQ Count** follows the same query.
+- Leave the toggle off for a normal site search.
 
 ## Related code
 

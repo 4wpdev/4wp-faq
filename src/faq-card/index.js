@@ -3,6 +3,8 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, RadioControl, TextControl, ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
+import { FaqTypographyPanel } from '../display/typography-panels';
+
 import './style.scss';
 
 registerBlockType( 'forwp/faq-card', {
@@ -12,9 +14,37 @@ registerBlockType( 'forwp/faq-card', {
 			showSources = false,
 			sourcesLabel = __( 'Used in', '4wp-faq' ),
 			showPostType = false,
+			questionStyle = {},
+			answerStyle = {},
 		} = attributes;
 		const blockProps = useBlockProps( {
 			className: `forwp-faq-card-editor is-display-${ displayMode }`,
+			style: {
+				...( questionStyle?.fontSize
+					? { '--forwp-faq-q-size': questionStyle.fontSize }
+					: {} ),
+				...( questionStyle?.fontFamily
+					? { '--forwp-faq-q-family': questionStyle.fontFamily }
+					: {} ),
+				...( questionStyle?.fontWeight
+					? { '--forwp-faq-q-weight': questionStyle.fontWeight }
+					: {} ),
+				...( questionStyle?.color
+					? { '--forwp-faq-q-color': questionStyle.color }
+					: {} ),
+				...( answerStyle?.fontSize
+					? { '--forwp-faq-a-size': answerStyle.fontSize }
+					: {} ),
+				...( answerStyle?.fontFamily
+					? { '--forwp-faq-a-family': answerStyle.fontFamily }
+					: {} ),
+				...( answerStyle?.fontWeight
+					? { '--forwp-faq-a-weight': answerStyle.fontWeight }
+					: {} ),
+				...( answerStyle?.color
+					? { '--forwp-faq-a-color': answerStyle.color }
+					: {} ),
+			},
 		} );
 
 		return (
@@ -75,6 +105,32 @@ registerBlockType( 'forwp/faq-card', {
 							</>
 						) : null }
 					</PanelBody>
+				</InspectorControls>
+				<InspectorControls group="styles">
+					<FaqTypographyPanel
+						panelId="forwp-faq-card-question-style"
+						title={ __( 'Question', '4wp-faq' ) }
+						help={ __(
+							'Empty values inherit from the theme or parent block.',
+							'4wp-faq'
+						) }
+						value={ questionStyle }
+						onChange={ ( next ) =>
+							setAttributes( { questionStyle: next } )
+						}
+					/>
+					<FaqTypographyPanel
+						panelId="forwp-faq-card-answer-style"
+						title={ __( 'Answer', '4wp-faq' ) }
+						help={ __(
+							'Empty values inherit from the theme or parent block.',
+							'4wp-faq'
+						) }
+						value={ answerStyle }
+						onChange={ ( next ) =>
+							setAttributes( { answerStyle: next } )
+						}
+					/>
 				</InspectorControls>
 				{ displayMode === 'heading' ? (
 					<div className="forwp-faq-card-editor__heading">

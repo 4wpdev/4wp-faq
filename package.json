@@ -1,6 +1,6 @@
 {
   "name": "forwp-faq",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "private": true,
   "scripts": {
     "build": "wp-scripts build",
@@ -13,9 +13,3 @@
     "sass": "^1.77.0"
   }
 }
-
-
-
-
-
-

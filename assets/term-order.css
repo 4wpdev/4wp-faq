@@ -1,9 +1,19 @@
-.wp-list-table.tags tbody tr.iedit {
+/* FAQ category drag-and-drop on edit-tags.php */
+
+#the-list.forwp-faq-term-order-sortable > tr[id^="tag-"] {
 	cursor: move;
 }
 
-.forwp-faq-term-order-placeholder {
+#the-list.forwp-faq-term-order-sortable > tr[id^="tag-"]:hover {
+	background: #f6f7f7;
+}
+
+.forwp-faq-term-order-placeholder td {
 	height: 48px;
 	background: #f0f0f1;
-	outline: 1px dashed #c3c4c7;
+	border: 1px dashed #c3c4c7 !important;
+}
+
+#forwp-faq-term-order-notice {
+	margin-top: 8px;
 }

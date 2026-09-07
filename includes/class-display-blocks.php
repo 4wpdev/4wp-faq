@@ -245,9 +245,14 @@ class Display_Blocks {
 		self::ensure_runtime();
 
 		$wrapper_attrs = [
-			'class'                => 'forwp-faq-list is-layout-' . $layout,
-			'data-wp-interactive'  => self::STORE,
+			'class'               => 'forwp-faq-list is-layout-' . $layout,
+			'data-wp-interactive' => self::STORE,
 		];
+
+		$typo_style = self::typography_style_attr( $card_attrs );
+		if ( '' !== $typo_style ) {
+			$wrapper_attrs['style'] = $typo_style;
+		}
 
 		$wrapper = get_block_wrapper_attributes( $wrapper_attrs );
 
@@ -612,7 +617,7 @@ class Display_Blocks {
 	 *
 	 * @param array          $attributes List attributes.
 	 * @param \WP_Block|null $block      List block instance.
-	 * @return array{displayMode: string, showSources: bool, sourcesLabel: string, showPostType: bool}
+	 * @return array{displayMode: string, showSources: bool, sourcesLabel: string, showPostType: bool, questionStyle: array, answerStyle: array}
 	 */
 	private static function resolve_card_attributes( $attributes, $block ) {
 		$inner = [];
@@ -648,12 +653,195 @@ class Display_Blocks {
 			$show_post_type = ! empty( $attributes['cardShowPostType'] );
 		}
 
+		$question_style = [];
+		if ( isset( $inner['questionStyle'] ) && is_array( $inner['questionStyle'] ) ) {
+			$question_style = $inner['questionStyle'];
+		} elseif ( isset( $attributes['cardQuestionStyle'] ) && is_array( $attributes['cardQuestionStyle'] ) ) {
+			$question_style = $attributes['cardQuestionStyle'];
+		}
+
+		$answer_style = [];
+		if ( isset( $inner['answerStyle'] ) && is_array( $inner['answerStyle'] ) ) {
+			$answer_style = $inner['answerStyle'];
+		} elseif ( isset( $attributes['cardAnswerStyle'] ) && is_array( $attributes['cardAnswerStyle'] ) ) {
+			$answer_style = $attributes['cardAnswerStyle'];
+		}
+
 		return [
-			'displayMode'  => $display,
-			'showSources'  => $show_sources,
-			'sourcesLabel' => $sources_label,
-			'showPostType' => $show_post_type,
+			'displayMode'   => $display,
+			'showSources'   => $show_sources,
+			'sourcesLabel'  => $sources_label,
+			'showPostType'  => $show_post_type,
+			'questionStyle' => self::sanitize_typography_style( $question_style ),
+			'answerStyle'   => self::sanitize_typography_style( $answer_style ),
 		];
+	}
+
+	/**
+	 * @param mixed $style Raw style object.
+	 * @return array{fontSize?: string, fontFamily?: string, fontWeight?: string, color?: string}
+	 */
+	private static function sanitize_typography_style( $style ) {
+		if ( ! is_array( $style ) ) {
+			return [];
+		}
+
+		$out = [];
+
+		if ( ! empty( $style['fontSize'] ) ) {
+			$size = self::sanitize_css_size( $style['fontSize'] );
+			if ( '' !== $size ) {
+				$out['fontSize'] = $size;
+			}
+		}
+
+		if ( ! empty( $style['fontFamily'] ) ) {
+			$family = self::sanitize_css_font_family( $style['fontFamily'] );
+			if ( '' !== $family ) {
+				$out['fontFamily'] = $family;
+			}
+		}
+
+		if ( ! empty( $style['fontWeight'] ) ) {
+			$weight = sanitize_text_field( (string) $style['fontWeight'] );
+			if ( preg_match( '/^(normal|bold|[1-9]00)$/', $weight ) ) {
+				$out['fontWeight'] = $weight;
+			}
+		}
+
+		if ( ! empty( $style['color'] ) ) {
+			$color = self::sanitize_css_color( $style['color'] );
+			if ( '' !== $color ) {
+				$out['color'] = $color;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * Allow hex, rgb/rgba/hsl, and CSS variables (incl. Gutenberg preset refs).
+	 *
+	 * @param mixed $value Raw color.
+	 * @return string
+	 */
+	private static function sanitize_css_color( $value ) {
+		$raw = trim( (string) $value );
+		if ( '' === $raw ) {
+			return '';
+		}
+
+		// Gutenberg attribute form: var:preset|color|slug → CSS variable.
+		if ( preg_match( '/^var:preset\|color\|([a-z0-9\-]+)$/i', $raw, $m ) ) {
+			return 'var(--wp--preset--color--' . strtolower( $m[1] ) . ')';
+		}
+
+		$hex = sanitize_hex_color( $raw );
+		if ( $hex ) {
+			return $hex;
+		}
+
+		if ( preg_match( '/^var\(--wp--preset--color--[a-z0-9\-]+\)$/i', $raw ) ) {
+			return $raw;
+		}
+
+		if ( preg_match( '/^var\(--[a-zA-Z0-9_\-]+\)$/', $raw ) ) {
+			return $raw;
+		}
+
+		if ( preg_match( '/^rgba?\(\s*[\d.%\s,]+\s*(?:\/\s*[\d.]+\s*)?\)$/i', $raw ) ) {
+			return $raw;
+		}
+
+		if ( preg_match( '/^hsla?\(\s*[\d.%\s,\/]+\s*\)$/i', $raw ) ) {
+			return $raw;
+		}
+
+		return '';
+	}
+
+	/**
+	 * @param mixed $value Raw size.
+	 * @return string
+	 */
+	private static function sanitize_css_size( $value ) {
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return '';
+		}
+
+		if ( is_numeric( $value ) ) {
+			return ( (float) $value ) . 'px';
+		}
+
+		if ( preg_match( '/^(\d+(\.\d+)?)(px|rem|em|%)$/', $value ) ) {
+			return $value;
+		}
+
+		if ( preg_match( '/^var\(--wp--preset--font-size--[a-z0-9\-]+\)$/', $value ) ) {
+			return $value;
+		}
+
+		return '';
+	}
+
+	/**
+	 * @param mixed $value Raw font-family.
+	 * @return string
+	 */
+	private static function sanitize_css_font_family( $value ) {
+		$value = trim( (string) $value );
+		if ( '' === $value ) {
+			return '';
+		}
+
+		if ( preg_match( '/^var\(--wp--preset--font-family--[a-z0-9\-]+\)$/', $value ) ) {
+			return $value;
+		}
+
+		// Allow simple family stacks: letters, spaces, commas, quotes, hyphens.
+		if ( preg_match( '/^[a-zA-Z0-9\s,\-\'"\.]+$/', $value ) && strlen( $value ) <= 120 ) {
+			return $value;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Build inline CSS custom properties for question/answer typography.
+	 *
+	 * @param array<string, mixed> $card_attrs Card attributes.
+	 * @return string
+	 */
+	private static function typography_style_attr( $card_attrs ) {
+		$question = isset( $card_attrs['questionStyle'] ) && is_array( $card_attrs['questionStyle'] )
+			? $card_attrs['questionStyle']
+			: [];
+		$answer = isset( $card_attrs['answerStyle'] ) && is_array( $card_attrs['answerStyle'] )
+			? $card_attrs['answerStyle']
+			: [];
+
+		$map = [
+			'--forwp-faq-q-size'   => $question['fontSize'] ?? '',
+			'--forwp-faq-q-family' => $question['fontFamily'] ?? '',
+			'--forwp-faq-q-weight' => $question['fontWeight'] ?? '',
+			'--forwp-faq-q-color'  => $question['color'] ?? '',
+			'--forwp-faq-a-size'   => $answer['fontSize'] ?? '',
+			'--forwp-faq-a-family' => $answer['fontFamily'] ?? '',
+			'--forwp-faq-a-weight' => $answer['fontWeight'] ?? '',
+			'--forwp-faq-a-color'  => $answer['color'] ?? '',
+		];
+
+		$parts = [];
+		foreach ( $map as $prop => $val ) {
+			$val = trim( (string) $val );
+			if ( '' === $val ) {
+				continue;
+			}
+			$parts[] = $prop . ':' . $val;
+		}
+
+		return implode( ';', $parts );
 	}
 
 	/**
@@ -785,6 +973,17 @@ class Display_Blocks {
 		$extra   = isset( $attributes['className'] ) ? trim( (string) $attributes['className'] ) : '';
 		$classes = trim( 'wp-block-forwp-faq-card forwp-faq-card is-display-' . $display . ' ' . $extra );
 
+		$style_attr = '';
+		$typo       = self::typography_style_attr(
+			[
+				'questionStyle' => self::sanitize_typography_style( $attributes['questionStyle'] ?? [] ),
+				'answerStyle'   => self::sanitize_typography_style( $attributes['answerStyle'] ?? [] ),
+			]
+		);
+		if ( '' !== $typo ) {
+			$style_attr = ' style="' . esc_attr( $typo ) . '"';
+		}
+
 		$context = self::context_attr(
 			[
 				'cats'       => implode( ' ', $term_slugs ),
@@ -799,20 +998,22 @@ class Display_Blocks {
 
 		if ( 'heading' === $display ) {
 			return sprintf(
-				'<article class="%1$s"%2$s%3$s><h3 class="forwp-faq-card__question">%4$s</h3><div class="forwp-faq-card__body">%5$s</div></article>',
+				'<article class="%1$s"%2$s%3$s%4$s><h3 class="forwp-faq-card__question">%5$s</h3><div class="forwp-faq-card__body">%6$s</div></article>',
 				esc_attr( $classes ),
 				$context,
 				$hidden_attr,
+				$style_attr,
 				esc_html( $question ),
 				$body
 			);
 		}
 
 		return sprintf(
-			'<article class="%1$s"%2$s%3$s><details class="forwp-faq-card__details"><summary class="forwp-faq-card__question" aria-controls="%4$s">%5$s</summary><div id="%4$s" class="forwp-faq-card__body">%6$s</div></details></article>',
+			'<article class="%1$s"%2$s%3$s%4$s><details class="forwp-faq-card__details"><summary class="forwp-faq-card__question" aria-controls="%5$s">%6$s</summary><div id="%5$s" class="forwp-faq-card__body">%7$s</div></details></article>',
 			esc_attr( $classes ),
 			$context,
 			$hidden_attr,
+			$style_attr,
 			esc_attr( $panel_id ),
 			esc_html( $question ),
 			$body

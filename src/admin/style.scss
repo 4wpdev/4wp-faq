@@ -116,6 +116,12 @@
 	gap: 1rem;
 }
 
+.forwp-faq-stats-card {
+	.forwp-faq-actions-card__meta {
+		margin-top: 1rem;
+	}
+}
+
 .forwp-faq-stats-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -253,4 +259,49 @@
 .forwp-faq-doc-muted {
 	color: #646970 !important;
 	font-size: 0.92em;
+}
+
+.forwp-faq-guide {
+	max-width: 640px;
+	margin-top: 1.25rem;
+	padding: 1.25rem 1.5rem;
+	background: #fff;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	box-shadow: 0 1px 3px rgb(0 0 0 / 6%);
+
+	&__lead {
+		margin: 0 0 1rem;
+		font-size: 1rem;
+		line-height: 1.5;
+		color: #1d2327;
+	}
+
+	&__steps {
+		margin: 0 0 1.25rem 1.25rem;
+		padding: 0;
+		line-height: 1.6;
+
+		li {
+			margin-bottom: 0.5rem;
+		}
+
+		a {
+			color: var(--wp-admin-theme-color, #3858e9);
+		}
+	}
+
+	&__hub,
+	&__video {
+		margin: 0 0 0.75rem;
+		color: #50575e;
+		line-height: 1.5;
+	}
+
+	&__video {
+		margin-bottom: 0;
+		padding-top: 0.75rem;
+		border-top: 1px solid #e8e8e8;
+		font-style: italic;
+	}
 }

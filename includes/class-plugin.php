@@ -34,6 +34,7 @@ class Plugin {
 		if ( is_admin() ) {
 			Admin_Settings::init();
 			add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_registry_admin_assets' ] );
+			add_action( 'load-post-new.php', [ __CLASS__, 'redirect_manual_add' ] );
 			add_action( 'admin_post_forwp_faq_scan', [ __CLASS__, 'handle_manual_scan' ] );
 			add_action( 'admin_notices', [ __CLASS__, 'render_setup_success_notice' ] );
 		}
@@ -85,7 +86,7 @@ class Plugin {
 		}
 
 		$post_type = Settings::get_post_type();
-		if ( 'post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix ) {
+		if ( 'post.php' !== $hook_suffix ) {
 			return;
 		}
 
@@ -101,6 +102,24 @@ class Plugin {
 			FORWP_FAQ_VERSION,
 			true
 		);
+	}
+
+	/**
+	 * Registry posts come from scan — do not use the native Add New editor.
+	 */
+	public static function redirect_manual_add() {
+		if ( ! Settings::is_setup_complete() ) {
+			return;
+		}
+
+		$post_type = Settings::get_post_type();
+		$requested = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( $post_type !== $requested ) {
+			return;
+		}
+
+		wp_safe_redirect( Admin_Settings::get_add_guide_url() );
+		exit;
 	}
 
 	/**
@@ -188,8 +207,9 @@ class Plugin {
 			'name'               => __( '4WP FAQ', '4wp-faq' ),
 			'singular_name'      => __( 'FAQ', '4wp-faq' ),
 			'menu_name'          => __( '4WP FAQ', '4wp-faq' ),
-			'all_items'          => __( '4WP FAQ', '4wp-faq' ),
-			'add_new_item'       => __( 'Add New FAQ', '4wp-faq' ),
+			'all_items'          => __( 'All FAQs', '4wp-faq' ),
+			'add_new'            => __( 'Add FAQ', '4wp-faq' ),
+			'add_new_item'       => __( 'Add FAQ', '4wp-faq' ),
 			'edit_item'          => __( 'Edit FAQ', '4wp-faq' ),
 			'new_item'           => __( 'New FAQ', '4wp-faq' ),
 			'view_item'          => __( 'View FAQ', '4wp-faq' ),
@@ -201,13 +221,17 @@ class Plugin {
 		register_post_type(
 			$post_type,
 			[
-				'labels'       => $labels,
-				'public'       => false,
-				'show_ui'      => true,
-				'show_in_rest' => true,
-				'menu_icon'    => 'dashicons-editor-help',
-				'supports'     => [ 'title' ],
-				'taxonomies'   => [ Settings::get_taxonomy() ],
+				'labels'          => $labels,
+				'public'          => false,
+				'show_ui'         => true,
+				'show_in_rest'    => true,
+				'menu_icon'       => 'dashicons-editor-help',
+				'supports'        => [ 'title' ],
+				'taxonomies'      => [ Settings::get_taxonomy() ],
+				'map_meta_cap'    => true,
+				'capabilities'    => [
+					'create_posts' => 'do_not_allow',
+				],
 			]
 		);
 	}
@@ -383,7 +407,7 @@ class Plugin {
 	}
 
 	/**
-	 * Output JSON-LD schema in the footer for posts containing the FAQ block.
+	 * Output FAQPage JSON-LD in wp_head for posts containing the FAQ block.
 	 */
 	public static function render_schema() {
 		if ( Yoast::is_active() ) {
@@ -621,6 +645,152 @@ class Plugin {
 	}
 
 	/**
+	 * Dashboard slices: category, usage, source, top reused.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function get_dashboard_data() {
+		$stats     = self::get_registry_stats();
+		$last_scan = (int) get_option( 'forwp_faq_last_scan_at', 0 );
+		$data      = [
+			'setup_complete'  => Settings::is_setup_complete(),
+			'setup_url'       => Setup_Wizard::get_page_url(),
+			'last_scan_label' => $last_scan ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $last_scan ) : '',
+			'registry_url'    => '',
+			'categories_url'  => '',
+			'stats'           => $stats,
+			'by_category'     => [],
+			'by_usage'        => [],
+			'by_source'       => [
+				[
+					'label' => __( 'Pages', '4wp-faq' ),
+					'count' => (int) $stats['pages_with_faq'],
+				],
+				[
+					'label' => __( 'Posts', '4wp-faq' ),
+					'count' => (int) $stats['posts_with_faq'],
+				],
+				[
+					'label' => __( 'Other types', '4wp-faq' ),
+					'count' => (int) $stats['other_content_with_faq'],
+				],
+			],
+			'top_reused'      => [],
+			'uncategorized'   => [],
+		];
+
+		if ( ! Settings::is_setup_complete() ) {
+			return $data;
+		}
+
+		$post_type = Settings::get_post_type();
+		$taxonomy  = Settings::get_taxonomy();
+
+		$data['registry_url']   = admin_url( 'edit.php?post_type=' . rawurlencode( $post_type ) );
+		$data['categories_url'] = admin_url( 'edit-tags.php?taxonomy=' . rawurlencode( $taxonomy ) . '&post_type=' . rawurlencode( $post_type ) );
+
+		$faq_ids = get_posts(
+			[
+				'post_type'      => $post_type,
+				'post_status'    => 'publish',
+				'fields'         => 'ids',
+				'posts_per_page' => -1,
+			]
+		);
+
+		$unused  = 0;
+		$reused  = [];
+		$no_term = [];
+
+		foreach ( $faq_ids as $faq_id ) {
+			$faq_id = (int) $faq_id;
+			$usage  = (int) get_post_meta( $faq_id, 'count_usage', true );
+			if ( $usage < 1 ) {
+				++$unused;
+			} elseif ( $usage > 1 ) {
+				$reused[] = [
+					'id'       => $faq_id,
+					'title'    => get_the_title( $faq_id ),
+					'count'    => $usage,
+					'edit_url' => get_edit_post_link( $faq_id, 'raw' ),
+				];
+			}
+
+			if ( 0 === Faq_Terms::get_primary_term_id( $faq_id ) ) {
+				$no_term[] = [
+					'id'       => $faq_id,
+					'title'    => get_the_title( $faq_id ),
+					'edit_url' => get_edit_post_link( $faq_id, 'raw' ),
+				];
+			}
+		}
+
+		usort(
+			$reused,
+			static function ( $a, $b ) {
+				return (int) $b['count'] <=> (int) $a['count'];
+			}
+		);
+
+		$data['top_reused']                 = array_slice( $reused, 0, 8 );
+		$data['uncategorized']              = array_slice( $no_term, 0, 8 );
+		$data['stats']['uncategorized']     = count( $no_term );
+		$data['stats']['unused_questions']  = $unused;
+
+		$data['by_usage'] = [
+			[
+				'label' => __( 'Reused', '4wp-faq' ),
+				'count' => (int) $stats['reused_questions'],
+			],
+			[
+				'label' => __( 'Used once', '4wp-faq' ),
+				'count' => (int) $stats['single_use_questions'],
+			],
+			[
+				'label' => __( 'Unused', '4wp-faq' ),
+				'count' => $unused,
+			],
+		];
+
+		if ( taxonomy_exists( $taxonomy ) ) {
+			$walk = static function ( $nodes ) use ( &$walk, $post_type, $taxonomy ) {
+				$out = [];
+				if ( ! is_array( $nodes ) ) {
+					return $out;
+				}
+
+				foreach ( $nodes as $node ) {
+					$term = $node['term'] ?? null;
+					if ( ! $term instanceof \WP_Term ) {
+						continue;
+					}
+
+					$children = [];
+					if ( ! empty( $node['children'] ) && is_array( $node['children'] ) ) {
+						$children = $walk( $node['children'] );
+					}
+
+					$out[] = [
+						'id'       => (int) $term->term_id,
+						'name'     => $term->name,
+						'count'    => (int) ( $node['inclusive_count'] ?? $term->count ),
+						'url'      => admin_url(
+							'edit.php?post_type=' . rawurlencode( $post_type ) . '&' . rawurlencode( $taxonomy ) . '=' . rawurlencode( $term->slug )
+						),
+						'children' => $children,
+					];
+				}
+
+				return $out;
+			};
+
+			$data['by_category'] = $walk( Registry_Content::get_category_tree_with_counts() );
+		}
+
+		return $data;
+	}
+
+	/**
 	 * Live counts from published content (independent of registry scan).
 	 *
 	 * @return array<string, int>
@@ -759,6 +929,7 @@ class Plugin {
 
 		$aggregated = self::aggregate_items( $items );
 		self::sync_faq_posts( $aggregated );
+		update_option( 'forwp_faq_last_scan_at', time() );
 	}
 
 	/**

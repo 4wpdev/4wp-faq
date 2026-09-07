@@ -125,6 +125,193 @@ const isHeadingParagraphPair = ( blocks ) => {
 	);
 };
 
+const isHeadingParagraphPairs = ( blocks ) => {
+	if ( ! Array.isArray( blocks ) || blocks.length < 2 || blocks.length % 2 !== 0 ) {
+		return false;
+	}
+
+	if ( blocks.length === 2 ) {
+		return isHeadingParagraphPair( blocks );
+	}
+
+	for ( let i = 0; i < blocks.length; i += 2 ) {
+		if (
+			blocks[ i ]?.name !== 'core/heading' ||
+			blocks[ i + 1 ]?.name !== 'core/paragraph'
+		) {
+			return false;
+		}
+	}
+
+	return true;
+};
+
+const TEXT_FAQ_SOURCE_BLOCKS = [
+	'core/paragraph',
+	'core/heading',
+	'core/list',
+	'core/quote',
+];
+
+const isConvertibleTextBlocks = ( blocks ) => {
+	if ( ! Array.isArray( blocks ) || blocks.length < 2 ) {
+		return false;
+	}
+
+	return blocks.every( ( block ) =>
+		TEXT_FAQ_SOURCE_BLOCKS.includes( block?.name )
+	);
+};
+
+const cloneBlockTree = ( block ) =>
+	createBlock(
+		block.name,
+		{ ...( block.attributes || {} ) },
+		( block.innerBlocks || [] ).map( cloneBlockTree )
+	);
+
+const stripHtmlToText = ( html ) =>
+	String( html || '' )
+		.replace( /<[^>]+>/g, ' ' )
+		.replace( /&nbsp;/gi, ' ' )
+		.replace( /\s+/g, ' ' )
+		.trim();
+
+const getQuestionContent = ( block ) => {
+	if ( ! block ) {
+		return '';
+	}
+
+	if ( block.name === 'core/heading' || block.name === 'core/paragraph' ) {
+		return block.attributes?.content || '';
+	}
+
+	if ( block.name === 'core/list' ) {
+		const questions = extractListItemQuestions( block.innerBlocks );
+		return questions[ 0 ] || '';
+	}
+
+	return extractTextFromBlocks( block.innerBlocks?.length ? block.innerBlocks : [ block ] );
+};
+
+const looksLikeQuestion = ( block ) => {
+	if ( block?.name === 'core/heading' ) {
+		return true;
+	}
+
+	return /\?\s*$/.test( stripHtmlToText( getQuestionContent( block ) ) );
+};
+
+const groupTextBlocksIntoFaqItems = ( blocks ) => {
+	const useCues = blocks.some( looksLikeQuestion );
+
+	if ( useCues ) {
+		const items = [];
+		let current = null;
+
+		blocks.forEach( ( block ) => {
+			if ( ! current || looksLikeQuestion( block ) ) {
+				if ( current ) {
+					items.push( current );
+				}
+				current = {
+					question: getQuestionContent( block ),
+					answers: [],
+				};
+				return;
+			}
+
+			current.answers.push( block );
+		} );
+
+		if ( current ) {
+			items.push( current );
+		}
+
+		return items;
+	}
+
+	const items = [];
+	for ( let i = 0; i < blocks.length; i += 2 ) {
+		items.push( {
+			question: getQuestionContent( blocks[ i ] ),
+			answers: blocks[ i + 1 ] ? [ blocks[ i + 1 ] ] : [],
+		} );
+	}
+
+	return items;
+};
+
+const createAccordionItemFromQa = ( question, answerBlocks ) => {
+	const heading = stripHtmlToText( question )
+		? question
+		: __( 'Question', '4wp-faq' );
+	const panelInner =
+		answerBlocks.length > 0
+			? answerBlocks.map( cloneBlockTree )
+			: [
+					createBlock( 'core/paragraph', {
+						placeholder: __( 'Answer…', '4wp-faq' ),
+					} ),
+			  ];
+
+	return createBlock( 'core/accordion-item', {}, [
+		createBlock( 'core/accordion-heading', { content: heading } ),
+		createBlock( 'core/accordion-panel', {}, panelInner ),
+	] );
+};
+
+const createFaqFromTextBlocks = ( blocks ) => {
+	if ( isHeadingParagraphPairs( blocks ) ) {
+		return createFaqFromHeadingParagraphPairs(
+			blocks.map( ( block ) => block.attributes ),
+			blocks.map( ( block ) => block.innerBlocks )
+		);
+	}
+
+	const items = groupTextBlocksIntoFaqItems( blocks );
+
+	return createBlock( 'forwp/faq', {}, [
+		createBlock(
+			'core/accordion',
+			{},
+			items.map( ( item ) =>
+				createAccordionItemFromQa( item.question, item.answers )
+			)
+		),
+	] );
+};
+
+const createFaqFromDetails = ( attributes, innerBlocks ) => {
+	const isMulti = Array.isArray( attributes );
+	const attrsList = isMulti ? attributes : [ attributes ];
+	const innersList = isMulti ? innerBlocks : [ innerBlocks || [] ];
+
+	return createBlock(
+		'forwp/faq',
+		{},
+		attrsList.map( ( attrs, i ) =>
+			createBlock( 'core/details', attrs || {}, innersList[ i ] || [] )
+		)
+	);
+};
+
+const createFaqFromAccordionItems = ( attributes, innerBlocks ) => {
+	const isMulti = Array.isArray( attributes );
+	const attrsList = isMulti ? attributes : [ attributes ];
+	const innersList = isMulti ? innerBlocks : [ innerBlocks || [] ];
+
+	return createBlock( 'forwp/faq', {}, [
+		createBlock(
+			'core/accordion',
+			{},
+			attrsList.map( ( attrs, i ) =>
+				createBlock( 'core/accordion-item', attrs || {}, innersList[ i ] || [] )
+			)
+		),
+	] );
+};
+
 const createFaqFromHeadingParagraphPair = ( attributes, innerBlocks ) => {
 	let headingAttrs = attributes[ 0 ];
 	let paragraphAttrs = attributes[ 1 ];
@@ -153,22 +340,73 @@ const createFaqFromHeadingParagraphPair = ( attributes, innerBlocks ) => {
 	] );
 };
 
-const headingParagraphToFaqTransform = {
+const createFaqFromHeadingParagraphPairs = ( attributes, innerBlocks ) => {
+	if ( attributes.length === 2 && ! isHeadingAttrs( attributes[ 0 ] ) ) {
+		return createFaqFromHeadingParagraphPair( attributes, innerBlocks );
+	}
+
+	const items = [];
+	for ( let i = 0; i < attributes.length; i += 2 ) {
+		const question = attributes[ i ]?.content || '';
+		const answerBlock = createBlock(
+			'core/paragraph',
+			attributes[ i + 1 ] || {},
+			innerBlocks[ i + 1 ] || []
+		);
+		items.push(
+			createBlock( 'core/accordion-item', {}, [
+				createBlock( 'core/accordion-heading', { content: question } ),
+				createBlock( 'core/accordion-panel', {}, [ answerBlock ] ),
+			] )
+		);
+	}
+
+	return createBlock( 'forwp/faq', {}, [
+		createBlock( 'core/accordion', {}, items ),
+	] );
+};
+
+const CONVERT_TO_FAQ_LABEL = __( 'Convert to 4WP FAQ', '4wp-faq' );
+
+const textBlocksToFaqTransform = {
 	type: 'block',
 	blocks: [ 'forwp/faq' ],
 	isMultiBlock: true,
-	isMatch: ( attributes, blocks ) => isHeadingParagraphPair( blocks ),
-	transform: ( attributes, innerBlocks ) =>
-		createFaqFromHeadingParagraphPair( attributes, innerBlocks ),
+	isMatch: ( attributes, blocks ) => isConvertibleTextBlocks( blocks ),
+	__experimentalConvert: ( blocks ) => createFaqFromTextBlocks( blocks ),
 };
 
-const headingParagraphFaqFromTransform = {
+const textBlocksFaqFromTransform = {
 	type: 'block',
-	blocks: [ 'core/heading', 'core/paragraph' ],
+	blocks: [ '*' ],
 	isMultiBlock: true,
-	isMatch: ( attributes, blocks ) => isHeadingParagraphPair( blocks ),
+	isMatch: ( attributes, blocks ) => isConvertibleTextBlocks( blocks ),
+	__experimentalConvert: ( blocks ) => createFaqFromTextBlocks( blocks ),
+};
+
+const detailsToFaqTransform = {
+	type: 'block',
+	blocks: [ 'forwp/faq' ],
+	isMultiBlock: true,
 	transform: ( attributes, innerBlocks ) =>
-		createFaqFromHeadingParagraphPair( attributes, innerBlocks ),
+		createFaqFromDetails( attributes, innerBlocks ),
+};
+
+const accordionItemToFaqTransform = {
+	type: 'block',
+	blocks: [ 'forwp/faq' ],
+	isMultiBlock: true,
+	transform: ( attributes, innerBlocks ) =>
+		createFaqFromAccordionItems( attributes, innerBlocks ),
+};
+
+const accordionToFaqTransform = {
+	type: 'block',
+	blocks: [ 'forwp/faq' ],
+	transform: ( attributes, innerBlocks ) =>
+		createBlock( 'forwp/faq', {}, [
+			createBlock( 'core/accordion', attributes, innerBlocks ),
+		] ),
 };
 
 const extractListItemQuestions = ( innerBlocks ) => {
@@ -572,22 +810,18 @@ registerBlockType( 'forwp/faq', {
 			{
 				type: 'block',
 				blocks: [ 'core/accordion-item' ],
+				isMultiBlock: true,
 				transform: ( attributes, innerBlocks ) =>
-					createBlock( 'forwp/faq', {}, [
-						createBlock( 'core/accordion', {}, [
-							createBlock( 'core/accordion-item', attributes, innerBlocks ),
-						] ),
-					] ),
+					createFaqFromAccordionItems( attributes, innerBlocks ),
 			},
 			{
 				type: 'block',
 				blocks: [ 'core/details' ],
+				isMultiBlock: true,
 				transform: ( attributes, innerBlocks ) =>
-					createBlock( 'forwp/faq', {}, [
-						createBlock( 'core/details', attributes, innerBlocks ),
-					] ),
+					createFaqFromDetails( attributes, innerBlocks ),
 			},
-			headingParagraphFaqFromTransform,
+			textBlocksFaqFromTransform,
 			{
 				type: 'block',
 				blocks: [ 'core/list' ],
@@ -603,27 +837,60 @@ const withFaqTransform = createHigherOrderComponent(
 		( props ) => {
 			const isAccordion = isAccordionBlock( props.name );
 			const isAccordionItem = props.name === 'core/accordion-item';
+			const isDetails = props.name === 'core/details';
 			const isList = props.name === 'core/list';
 
-			if ( ! isAccordion && ! isAccordionItem && ! isList ) {
+			if ( ! isAccordion && ! isAccordionItem && ! isDetails && ! isList ) {
 				return <BlockEdit { ...props } />;
 			}
 
-			const { replaceBlock } = useDispatch( 'core/block-editor' );
-			const { getBlock, getBlockRootClientId } = useSelect(
-				( select ) => ( {
-					getBlock: select( 'core/block-editor' ).getBlock,
-					getBlockRootClientId:
-						select( 'core/block-editor' ).getBlockRootClientId,
-				} ),
-				[ props.clientId ]
-			);
+			const { replaceBlock, replaceBlocks } = useDispatch( 'core/block-editor' );
+			const { getBlock, getBlockRootClientId, getMultiSelectedBlockClientIds } =
+				useSelect(
+					( select ) => ( {
+						getBlock: select( 'core/block-editor' ).getBlock,
+						getBlockRootClientId:
+							select( 'core/block-editor' ).getBlockRootClientId,
+						getMultiSelectedBlockClientIds:
+							select( 'core/block-editor' ).getMultiSelectedBlockClientIds,
+					} ),
+					[ props.clientId ]
+				);
+
+			const selectedIds = getMultiSelectedBlockClientIds();
+			const selectedBlocks = ( selectedIds || [] )
+				.map( ( id ) => getBlock( id ) )
+				.filter( Boolean );
+			const sameTypeMulti =
+				selectedBlocks.length > 1 &&
+				selectedBlocks.every( ( block ) => block.name === props.name ) &&
+				( isDetails || isAccordionItem );
+			const showConvert =
+				! sameTypeMulti || selectedIds[ 0 ] === props.clientId;
 
 			const onConvert = () => {
+				if ( sameTypeMulti ) {
+					const attrs = selectedBlocks.map( ( block ) => block.attributes );
+					const inners = selectedBlocks.map( ( block ) => block.innerBlocks );
+					const faqBlock = isDetails
+						? createFaqFromDetails( attrs, inners )
+						: createFaqFromAccordionItems( attrs, inners );
+					replaceBlocks( selectedIds, [ faqBlock ] );
+					return;
+				}
+
 				if ( isList ) {
 					replaceBlock(
 						props.clientId,
 						createFaqFromList( props.attributes, props.innerBlocks )
+					);
+					return;
+				}
+
+				if ( isDetails ) {
+					replaceBlock(
+						props.clientId,
+						createFaqFromDetails( props.attributes, props.innerBlocks )
 					);
 					return;
 				}
@@ -656,11 +923,13 @@ const withFaqTransform = createHigherOrderComponent(
 
 				replaceBlock(
 					props.clientId,
-					createBlock( 'forwp/faq', {}, [
-						createBlock( props.name, props.attributes, props.innerBlocks ),
-					] )
+					createFaqFromAccordionItems( props.attributes, props.innerBlocks )
 				);
 			};
+
+			if ( ! showConvert ) {
+				return <BlockEdit { ...props } />;
+			}
 
 			return (
 				<Fragment>
@@ -669,7 +938,8 @@ const withFaqTransform = createHigherOrderComponent(
 						<ToolbarGroup>
 							<ToolbarButton
 								icon="editor-help"
-								label="Convert to FAQ"
+								text={ CONVERT_TO_FAQ_LABEL }
+								label={ CONVERT_TO_FAQ_LABEL }
 								onClick={ onConvert }
 							/>
 						</ToolbarGroup>
@@ -685,7 +955,7 @@ addFilter( 'editor.BlockEdit', 'forwp/faq/with-transform', withFaqTransform );
 const withHeadingParagraphFaqConvert = createHigherOrderComponent(
 	( BlockEdit ) =>
 		( props ) => {
-			if ( props.name !== 'core/heading' && props.name !== 'core/paragraph' ) {
+			if ( ! TEXT_FAQ_SOURCE_BLOCKS.includes( props.name ) ) {
 				return <BlockEdit { ...props } />;
 			}
 
@@ -702,10 +972,10 @@ const withHeadingParagraphFaqConvert = createHigherOrderComponent(
 
 			const selectedIds = getMultiSelectedBlockClientIds();
 			const selectedBlocks =
-				selectedIds.length === 2
+				selectedIds.length >= 2
 					? selectedIds.map( ( id ) => getBlock( id ) ).filter( Boolean )
 					: [];
-			const canConvert = isHeadingParagraphPair( selectedBlocks );
+			const canConvert = isConvertibleTextBlocks( selectedBlocks );
 			const showConvert = canConvert && selectedIds[ 0 ] === props.clientId;
 
 			const onConvert = () => {
@@ -713,17 +983,7 @@ const withHeadingParagraphFaqConvert = createHigherOrderComponent(
 					return;
 				}
 
-				let ordered = selectedBlocks;
-				if ( ordered[ 0 ].name === 'core/paragraph' ) {
-					ordered = [ ordered[ 1 ], ordered[ 0 ] ];
-				}
-
-				const faqBlock = createFaqFromHeadingParagraphPair(
-					[ ordered[ 0 ].attributes, ordered[ 1 ].attributes ],
-					[ ordered[ 0 ].innerBlocks, ordered[ 1 ].innerBlocks ]
-				);
-
-				replaceBlocks( selectedIds, [ faqBlock ] );
+				replaceBlocks( selectedIds, [ createFaqFromTextBlocks( selectedBlocks ) ] );
 			};
 
 			return (
@@ -734,7 +994,8 @@ const withHeadingParagraphFaqConvert = createHigherOrderComponent(
 							<ToolbarGroup>
 								<ToolbarButton
 									icon="editor-help"
-									label={ __( 'Convert to FAQ', '4wp-faq' ) }
+									text={ CONVERT_TO_FAQ_LABEL }
+									label={ CONVERT_TO_FAQ_LABEL }
 									onClick={ onConvert }
 								/>
 							</ToolbarGroup>
@@ -753,14 +1014,18 @@ addFilter(
 );
 
 const addBlockToFaqTransform = ( settings, blockName ) => {
-	if ( blockName === 'core/heading' || blockName === 'core/paragraph' ) {
+	if (
+		blockName === 'core/heading' ||
+		blockName === 'core/paragraph' ||
+		blockName === 'core/quote'
+	) {
 		const existingTo = settings.transforms?.to || [];
 
 		return {
 			...settings,
 			transforms: {
 				...settings.transforms,
-				to: [ ...existingTo, headingParagraphToFaqTransform ],
+				to: [ ...existingTo, textBlocksToFaqTransform ],
 			},
 		};
 	}
@@ -772,7 +1037,43 @@ const addBlockToFaqTransform = ( settings, blockName ) => {
 			...settings,
 			transforms: {
 				...settings.transforms,
-				to: [ ...existingTo, listToFaqTransform ],
+				to: [ ...existingTo, listToFaqTransform, textBlocksToFaqTransform ],
+			},
+		};
+	}
+
+	if ( blockName === 'core/details' ) {
+		const existingTo = settings.transforms?.to || [];
+
+		return {
+			...settings,
+			transforms: {
+				...settings.transforms,
+				to: [ ...existingTo, detailsToFaqTransform ],
+			},
+		};
+	}
+
+	if ( blockName === 'core/accordion-item' ) {
+		const existingTo = settings.transforms?.to || [];
+
+		return {
+			...settings,
+			transforms: {
+				...settings.transforms,
+				to: [ ...existingTo, accordionItemToFaqTransform ],
+			},
+		};
+	}
+
+	if ( blockName === 'core/accordion' || blockName === 'core/accordion-group' ) {
+		const existingTo = settings.transforms?.to || [];
+
+		return {
+			...settings,
+			transforms: {
+				...settings.transforms,
+				to: [ ...existingTo, accordionToFaqTransform ],
 			},
 		};
 	}

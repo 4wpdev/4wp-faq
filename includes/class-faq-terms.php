@@ -26,18 +26,18 @@ class Faq_Terms {
 	public static function init() {
 		add_action( 'init', [ __CLASS__, 'register_term_meta' ], 20 );
 		add_action( 'wp_head', [ __CLASS__, 'render_meta_description' ], 1 );
-		add_filter( 'pre_get_document_title', [ __CLASS__, 'filter_document_title' ], 20 );
-		add_filter( 'document_title_parts', [ __CLASS__, 'filter_document_title_parts' ], 20 );
+		add_filter( 'pre_get_document_title', [ __CLASS__, 'filter_document_title' ], 99 );
+		add_filter( 'document_title_parts', [ __CLASS__, 'filter_document_title_parts' ], 99 );
 		add_filter( 'render_block_core/heading', [ __CLASS__, 'filter_heading_block' ], 10, 2 );
 
-		add_filter( 'wpseo_title', [ __CLASS__, 'filter_plain_title' ], 20 );
+		add_filter( 'wpseo_title', [ __CLASS__, 'filter_plain_title' ], 99 );
 		add_filter( 'wpseo_metadesc', [ __CLASS__, 'filter_plain_description' ], 20 );
-		add_filter( 'wpseo_opengraph_title', [ __CLASS__, 'filter_plain_title' ], 20 );
+		add_filter( 'wpseo_opengraph_title', [ __CLASS__, 'filter_plain_title' ], 99 );
 		add_filter( 'wpseo_opengraph_desc', [ __CLASS__, 'filter_plain_description' ], 20 );
-		add_filter( 'wpseo_twitter_title', [ __CLASS__, 'filter_plain_title' ], 20 );
+		add_filter( 'wpseo_twitter_title', [ __CLASS__, 'filter_plain_title' ], 99 );
 		add_filter( 'wpseo_twitter_description', [ __CLASS__, 'filter_plain_description' ], 20 );
 
-		add_filter( 'rank_math/frontend/title', [ __CLASS__, 'filter_plain_title' ], 20 );
+		add_filter( 'rank_math/frontend/title', [ __CLASS__, 'filter_plain_title' ], 99 );
 		add_filter( 'rank_math/frontend/description', [ __CLASS__, 'filter_plain_description' ], 20 );
 		add_filter( 'rank_math/opengraph/facebook/title', [ __CLASS__, 'filter_plain_title' ], 20 );
 		add_filter( 'rank_math/opengraph/facebook/description', [ __CLASS__, 'filter_plain_description' ], 20 );
@@ -112,7 +112,7 @@ class Faq_Terms {
 		<div class="form-field">
 			<label for="forwp_seo_title"><?php esc_html_e( 'SEO title', '4wp-faq' ); ?></label>
 			<input type="text" name="forwp_seo_title" id="forwp_seo_title" value="" />
-			<p class="description"><?php esc_html_e( 'Document title on SEO category URLs. Empty: display title, then category name.', '4wp-faq' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Document title on SEO category URLs. If filled, used as-is (no site name suffix). Empty: display title + site name.', '4wp-faq' ); ?></p>
 		</div>
 		<div class="form-field">
 			<label for="forwp_seo_description"><?php esc_html_e( 'SEO description', '4wp-faq' ); ?></label>
@@ -147,7 +147,7 @@ class Faq_Terms {
 			<th scope="row"><label for="forwp_seo_title"><?php esc_html_e( 'SEO title', '4wp-faq' ); ?></label></th>
 			<td>
 				<input type="text" name="forwp_seo_title" id="forwp_seo_title" value="<?php echo esc_attr( $seo ); ?>" />
-				<p class="description"><?php esc_html_e( 'Document title on SEO category URLs. Empty: display title, then category name.', '4wp-faq' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Document title on SEO category URLs. If filled, used as-is (no site name suffix). Empty: display title + site name.', '4wp-faq' ); ?></p>
 			</td>
 		</tr>
 		<tr class="form-field">
@@ -243,22 +243,58 @@ class Faq_Terms {
 	}
 
 	/**
-	 * Document title for a category URL.
+	 * Custom SEO title when the term field is filled.
 	 *
 	 * @param \WP_Term $term Term.
-	 * @return string
+	 * @return string Empty when the field is not set.
 	 */
-	public static function get_seo_title( $term ) {
+	public static function get_custom_seo_title( $term ) {
 		if ( ! $term instanceof \WP_Term ) {
 			return '';
 		}
 
 		$custom = get_term_meta( (int) $term->term_id, self::META_SEO_TITLE, true );
-		if ( is_string( $custom ) && '' !== trim( $custom ) ) {
-			return trim( $custom );
+
+		return is_string( $custom ) ? trim( $custom ) : '';
+	}
+
+	/**
+	 * Document title for a category URL (custom SEO title or display title).
+	 *
+	 * @param \WP_Term $term Term.
+	 * @return string
+	 */
+	public static function get_seo_title( $term ) {
+		$custom = self::get_custom_seo_title( $term );
+
+		return '' !== $custom ? $custom : self::get_display_title( $term );
+	}
+
+	/**
+	 * Full document title: custom SEO title as-is, otherwise display title + site name.
+	 *
+	 * @param \WP_Term $term Term.
+	 * @return string
+	 */
+	public static function get_document_title( $term ) {
+		$custom = self::get_custom_seo_title( $term );
+		if ( '' !== $custom ) {
+			return $custom;
 		}
 
-		return self::get_display_title( $term );
+		$seo  = self::get_seo_title( $term );
+		$site = get_bloginfo( 'name', 'display' );
+		$site = is_string( $site ) ? trim( $site ) : '';
+
+		if ( '' === $seo ) {
+			return $site;
+		}
+
+		if ( '' === $site || false !== strpos( $seo, $site ) ) {
+			return $seo;
+		}
+
+		return $seo . ' – ' . $site;
 	}
 
 	/**
@@ -287,14 +323,9 @@ class Faq_Terms {
 			return $title;
 		}
 
-		$seo = self::get_seo_title( $term );
-		if ( '' === $seo ) {
-			return $title;
-		}
+		$seo = self::get_document_title( $term );
 
-		$site = get_bloginfo( 'name', 'display' );
-
-		return '' !== $site ? $seo . ' – ' . $site : $seo;
+		return '' !== $seo ? $seo : $title;
 	}
 
 	/**
@@ -304,6 +335,14 @@ class Faq_Terms {
 	public static function filter_document_title_parts( $parts ) {
 		$term = self::get_seo_term();
 		if ( ! $term instanceof \WP_Term || ! is_array( $parts ) ) {
+			return $parts;
+		}
+
+		$custom = self::get_custom_seo_title( $term );
+		if ( '' !== $custom ) {
+			$parts['title'] = $custom;
+			unset( $parts['site'], $parts['tagline'] );
+
 			return $parts;
 		}
 
@@ -325,17 +364,9 @@ class Faq_Terms {
 			return $title;
 		}
 
-		$seo = self::get_seo_title( $term );
-		if ( '' === $seo ) {
-			return $title;
-		}
+		$seo = self::get_document_title( $term );
 
-		$site = get_bloginfo( 'name', 'display' );
-		if ( is_string( $site ) && '' !== $site && false === strpos( $seo, $site ) ) {
-			return $seo . ' – ' . $site;
-		}
-
-		return $seo;
+		return '' !== $seo ? $seo : $title;
 	}
 
 	/**

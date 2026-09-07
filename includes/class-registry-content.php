@@ -627,6 +627,33 @@ class Registry_Content {
 	}
 
 	/**
+	 * Full category tree in saved parent → child / term_order.
+	 *
+	 * @return list<array{term: \WP_Term, children: array}>
+	 */
+	public static function get_category_tree() {
+		$by_id = [];
+		foreach ( self::get_terms_in_tree_order() as $term ) {
+			$by_id[ (int) $term->term_id ] = $term;
+		}
+
+		if ( empty( $by_id ) ) {
+			return [];
+		}
+
+		return self::build_nav_tree( $by_id );
+	}
+
+	/**
+	 * Full category tree with parent counts including all descendants.
+	 *
+	 * @return list<array{term: \WP_Term, children: array, inclusive_count: int}>
+	 */
+	public static function get_category_tree_with_counts() {
+		return self::annotate_nav_counts( self::get_category_tree() );
+	}
+
+	/**
 	 * Parent count = own questions + all descendants (unique via primary grouping).
 	 *
 	 * @param list<array{term: \WP_Term, children: array}> $nodes Tree.

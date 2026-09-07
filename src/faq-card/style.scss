@@ -11,9 +11,11 @@
 .forwp-faq-card__question {
 	margin: 0;
 	padding: 0.9rem 0;
-	font-size: 1rem;
-	font-weight: 650;
-	line-height: 1.4;
+	font-family: var(--forwp-faq-q-family, inherit);
+	font-size: var(--forwp-faq-q-size, inherit);
+	font-weight: var(--forwp-faq-q-weight, 650);
+	line-height: var(--forwp-faq-q-line, inherit);
+	color: var(--forwp-faq-q-color, inherit);
 	cursor: pointer;
 	list-style: none;
 }
@@ -44,6 +46,30 @@
 
 .forwp-faq-card__answer {
 	margin: 0;
+	font-family: var(--forwp-faq-a-family, inherit);
+	font-size: var(--forwp-faq-a-size, inherit);
+	font-weight: var(--forwp-faq-a-weight, inherit);
+	line-height: var(--forwp-faq-a-line, inherit);
+	color: var(--forwp-faq-a-color, inherit);
+}
+
+/*
+ * Nested registry HTML (p/li/…) often loses to theme `.entry-content p` rules.
+ * `:where()` had zero specificity — use a card-scoped selector instead.
+ */
+.wp-block-forwp-faq-card .forwp-faq-card__answer p,
+.wp-block-forwp-faq-card .forwp-faq-card__answer li,
+.wp-block-forwp-faq-card .forwp-faq-card__answer div,
+.wp-block-forwp-faq-card .forwp-faq-card__answer span,
+.forwp-faq-card .forwp-faq-card__answer p,
+.forwp-faq-card .forwp-faq-card__answer li,
+.forwp-faq-card .forwp-faq-card__answer div,
+.forwp-faq-card .forwp-faq-card__answer span {
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: inherit;
+	color: inherit;
 }
 
 .forwp-faq-card__answer > *:first-child {
@@ -92,11 +118,18 @@
 .forwp-faq-card-editor__question {
 	display: block;
 	margin: 0;
-	font-weight: 650;
+	font-family: var(--forwp-faq-q-family, inherit);
+	font-size: var(--forwp-faq-q-size, inherit);
+	font-weight: var(--forwp-faq-q-weight, 650);
+	color: var(--forwp-faq-q-color, inherit);
 }
 
 .forwp-faq-card-editor__answer,
 .forwp-faq-card-editor__sources {
 	margin: 0.35rem 0 0;
+	font-family: var(--forwp-faq-a-family, inherit);
+	font-size: var(--forwp-faq-a-size, inherit);
+	font-weight: var(--forwp-faq-a-weight, inherit);
+	color: var(--forwp-faq-a-color, inherit);
 	opacity: 0.75;
 }

@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * REST API for the FAQ admin settings app.
  *
- * All routes under forwp-faq/v1 require manage_options via permission_callback.
+ * Reads: edit_posts or manage_options. Writes: manage_options.
  */
 class Admin_Rest {
 	/**
@@ -29,7 +29,7 @@ class Admin_Rest {
 				[
 					'methods'             => \WP_REST_Server::READABLE,
 					'callback'            => [ __CLASS__, 'get_settings' ],
-					'permission_callback' => [ __CLASS__, 'can_manage' ],
+					'permission_callback' => [ __CLASS__, 'can_view' ],
 				],
 				[
 					'methods'             => \WP_REST_Server::CREATABLE,
@@ -59,7 +59,7 @@ class Admin_Rest {
 			[
 				'methods'             => \WP_REST_Server::READABLE,
 				'callback'            => [ __CLASS__, 'get_registry' ],
-				'permission_callback' => [ __CLASS__, 'can_manage' ],
+				'permission_callback' => [ __CLASS__, 'can_view' ],
 			]
 		);
 
@@ -89,6 +89,15 @@ class Admin_Rest {
 	 */
 	public static function can_manage() {
 		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Dashboard stats: editors who can see the FAQ list.
+	 *
+	 * @return bool
+	 */
+	public static function can_view() {
+		return current_user_can( 'manage_options' ) || current_user_can( 'edit_posts' );
 	}
 
 	/**
@@ -189,7 +198,6 @@ class Admin_Rest {
 		}
 
 		Plugin::scan_all_posts();
-		update_option( 'forwp_faq_last_scan_at', time() );
 
 		return self::get_registry();
 	}
