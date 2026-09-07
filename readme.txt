@@ -1,14 +1,14 @@
 === 4WP FAQ ===
 Contributors: 4wpdev, anatolikkk
-Tags: faq, accordion, json-ld, schema, seo, gutenberg, faqpage
-Requires at least: 6.0
+Tags: faq, accordion, json-ld, gutenberg, seo
+Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 2.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-FAQPage schema for core Accordion, optional FAQ registry hub, category SEO, and drag-and-drop category order—without duplicating content or fighting your theme.
+FAQPage schema for core Accordion, optional registry hub, category SEO, and drag-and-drop order—without duplicating content.
 
 == Description ==
 
@@ -189,6 +189,7 @@ Yes. **FAQ → Dashboard** is available to users who can edit posts. **Rescan** 
 == Changelog ==
 
 = 2.3.0 =
+* Requires WordPress **6.6+** (Interactivity API for List / Categories hub).
 * Convert selected **Details**, **Accordion** / **Accordion Item**, heading+paragraph pairs, or a **List** to **4WP FAQ** via Transform to and the Convert to FAQ toolbar (one or many items).
 * Category SEO title: when filled, the document title is used as-is (no site-name suffix).
 * Admin **Dashboard** under the FAQ menu: status metrics, Rescan, hierarchical By category (collapsible, inclusive counts), reused / uncategorized.
@@ -236,7 +237,7 @@ Yes. **FAQ → Dashboard** is available to users who can edit posts. **Rescan** 
 == Upgrade Notice ==
 
 = 2.3.0 =
-Dashboard, drag-and-drop category order, category title rules, Transform to 4WP FAQ for selected Details/Accordion items, and filled SEO titles no longer append the site name.
+Requires WordPress 6.6+. Dashboard, drag-and-drop category order, category title rules, Transform to 4WP FAQ for selected Details/Accordion items, and filled SEO titles no longer append the site name.
 
 = 2.2.0 =
 Hub blocks visible on the plugin directory, Count block, preview/SEO URL settings, and Anatoliy Dovgun as contributor. Re-upload screenshots to SVN assets if captions still show empty images.

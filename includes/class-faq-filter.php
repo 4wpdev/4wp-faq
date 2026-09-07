@@ -131,14 +131,15 @@ class Faq_Filter {
 	public static function get_active_slug() {
 		$slug = get_query_var( self::QUERY_VAR, '' );
 		if ( ! is_string( $slug ) || '' === $slug ) {
-			// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			if ( ! empty( $_GET[ self::QUERY_VAR ] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public front-end filter query arg.
+			if ( isset( $_GET[ self::QUERY_VAR ] ) ) {
 				// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-				$slug = wp_unslash( (string) $_GET[ self::QUERY_VAR ] );
+				$slug = sanitize_title( wp_unslash( (string) $_GET[ self::QUERY_VAR ] ) );
 			}
+		} else {
+			$slug = sanitize_title( $slug );
 		}
 
-		$slug = sanitize_title( $slug );
 		if ( '' === $slug || ! self::is_category_slug( $slug ) ) {
 			return '';
 		}

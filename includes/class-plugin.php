@@ -443,7 +443,7 @@ class Plugin {
 		}
 
 		echo '<script type="application/ld+json" class="forwp-faq-schema">';
-		echo wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE );
+		echo wp_json_encode( $schema );
 		echo '</script>';
 	}
 

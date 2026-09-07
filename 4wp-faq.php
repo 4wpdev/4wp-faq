@@ -4,7 +4,7 @@
  * Plugin URI:        https://github.com/4wpdev/4wp-faq
  * Description: Not just another FAQ block. A smart wrapper that adds intelligence without breaking your design. Adds JSON-LD schema, aggregation, and usage context while working on top of existing content with zero duplication.
  * Version:           2.3.0
- * Requires at least: 6.0
+ * Requires at least: 6.6
  * Requires PHP:      7.4
  * Tested up to:      7.1
  * Author:            4WP Team
