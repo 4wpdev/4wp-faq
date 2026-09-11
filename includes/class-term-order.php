@@ -220,7 +220,9 @@ class Term_Order {
 		}
 
 		// Bump cache when assets change independently of plugin version.
-		$asset_ver = FORWP_FAQ_VERSION . '.' . (string) filemtime( FORWP_FAQ_PLUGIN_DIR . 'assets/term-order.js' );
+		$js_mtime  = (string) filemtime( FORWP_FAQ_PLUGIN_DIR . 'assets/term-order.js' );
+		$css_mtime = (string) filemtime( FORWP_FAQ_PLUGIN_DIR . 'assets/term-order.css' );
+		$asset_ver = FORWP_FAQ_VERSION . '.' . $js_mtime . '.' . $css_mtime;
 
 		wp_enqueue_script(
 			'forwp-faq-term-order',

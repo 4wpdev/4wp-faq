@@ -35,6 +35,10 @@
 			"type": "boolean",
 			"default": true
 		},
+		"collapseChildren": {
+			"type": "boolean",
+			"default": true
+		},
 		"seoUrls": {
 			"type": "boolean",
 			"default": false

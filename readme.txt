@@ -4,7 +4,7 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.3.0
+Stable tag: 2.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ FAQPage schema for core Accordion, optional registry hub, category SEO, and drag
 
 * **FAQPage JSON-LD** for Google rich results (off by default; turn on when you are ready)
 * An optional **FAQ registry** that aggregates questions across the site after a scan
-* **Hub pages** with List + Categories blocks, pretty category URLs, category SEO titles, and drag-and-drop category order (admin + front end)
+* **Hub pages** with List + Categories blocks, pretty category URLs, category SEO titles, collapsible subcategory nav, and drag-and-drop category order (admin + front end)
 * **Drag-and-drop FAQ category order** on **FAQ → Categories** — same order in admin lists and on the front end (List / Categories hub)
 
 A plugin by [4wp.dev](https://4wp.dev/). **4WP** is our project brand; this plugin is not affiliated with, endorsed, or sponsored by WordPress.
@@ -37,7 +37,7 @@ Registry posts are created by the scan. Do not create them by hand under “Add 
 
 * **4WP FAQ** (`forwp/faq`) — wrap Accordion / Accordion Item for JSON-LD and registry scan
 * **4WP FAQ List** (`forwp/faq-list`) — registry glossary: grouped or flat, include/exclude categories
-* **4WP FAQ Categories** (`forwp/faq-categories`) — category nav that filters the List
+* **4WP FAQ Categories** (`forwp/faq-categories`) — category nav that filters the List; nested terms collapse by default
 * **4WP FAQ Count** (`forwp/faq-count`) — live count for All / category / search (`[forwp_faq_count]`)
 * **4WP FAQ Card** (`forwp/faq-card`) — inner card for the List (not in the inserter)
 
@@ -49,8 +49,9 @@ Registry posts are created by the scan. Do not create them by hand under “Add 
 * **FAQ categories** — manage in admin, assign per block, or create on scan from the page
 * **Admin Dashboard** — status metrics, Rescan, hierarchical categories, reused / uncategorized
 * **FSE hub blocks** — List, Categories, Count, Card
+* Categories nav: nested terms collapse by default; visitors expand them and the browser remembers
 * Preview count per category on the All view + optional pretty category URLs (`/hub-page/term-slug/`)
-* Category SEO title / description fields; filled SEO title is used as-is (no site-name suffix)
+* Category SEO title / description / image fields; filled SEO title is used as-is (no site-name suffix); pretty URLs use a category canonical
 * Drag-and-drop category order on **FAQ → FAQ Categories** — same order in admin lists, Dashboard, and front-end List / Categories blocks
 * **Polylang** — categories follow the language of the page that owns the FAQ block
 * Setup wizard for registry post type and taxonomy slugs
@@ -132,8 +133,12 @@ List and Categories share include/exclude filters so the nav and list stay align
 When **Pretty category URLs** is on in Settings **and** on the Categories block:
 
 * Category links become `/your-hub-page/term-slug/`
-* The category **Display title** is used as H1
-* Optional category **SEO title** / **description** drive the document title and meta
+* **On-page title:** category **Display title** (empty: category name) in core **Title** (`core/post-title`), **Query Title** (`core/query-title`), or **Term Name** (`core/term-name`). The template chooses h1–h6. Heading blocks are not swapped.
+* **On-page description:** category **Description** in core **Excerpt** (`core/post-excerpt`) or **Term Description** (`core/term-description`)
+* Optional category **SEO title** / **SEO description** drive the document title and meta
+* **Canonical** / `og:url` is the category URL (`/hub/term-slug/`), not the hub
+* **SEO image** on the category is used for Open Graph / Twitter; empty uses the hub page image
+* The List does not repeat the category name as an H2 when the page title already shows it
 * JSON-LD on that URL is limited to that category
 
 When off, category clicks filter the list **in place** and the page URL does not change.
@@ -145,7 +150,7 @@ On each FAQ category term you can set **SEO title** and **SEO description**.
 * If **SEO title** is filled → the browser / document title uses that string **exactly** (no “ – site name” appended).
 * If it is empty → Display title + site name (WordPress default pattern).
 
-See **FAQ → Settings → Documentation** for H1 / title / meta rules.
+See **FAQ → Settings → Documentation** for on-page title / description and document title / meta rules.
 
 = When should I Rescan? =
 
@@ -187,6 +192,11 @@ Yes. **FAQ → Dashboard** is available to users who can edit posts. **Rescan** 
 3. FAQ hub — List + Categories (and Count) in the Site Editor
 
 == Changelog ==
+
+= 2.4.0 =
+* **FAQ Categories:** collapse nested terms by default (block inspector toggle). Visitors can expand/collapse parents; the choice is remembered in the browser. The branch for the current category stays open.
+* Pretty category URLs swap **Display title** into core Title / Query Title / Term Name, and **Description** into core Excerpt / Term Description. Heading level stays with the template.
+* Pretty category URLs: `<link rel="canonical">` and `og:url` point at `/hub/term-slug/` (not the hub). **SEO image** on the category is used for Open Graph / Twitter; empty falls back to the hub page image. List group H2 is omitted when the page title already shows that category.
 
 = 2.3.0 =
 * Requires WordPress **6.6+** (Interactivity API for List / Categories hub).
@@ -235,6 +245,9 @@ Yes. **FAQ → Dashboard** is available to users who can edit posts. **Rescan** 
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.4.0 =
+Category nav collapses nested terms by default. Pretty category URLs fill core Title / Query Title / Term Name and Excerpt / Term Description, use a category canonical and SEO image (hub image if empty), and skip the duplicate list H2 when the page title already shows the category.
 
 = 2.3.0 =
 Requires WordPress 6.6+. Dashboard, drag-and-drop category order, category title rules, Transform to 4WP FAQ for selected Details/Accordion items, and filled SEO titles no longer append the site name.

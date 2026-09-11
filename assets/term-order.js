@@ -2,6 +2,7 @@
  * Drag-and-drop FAQ category order on edit-tags.php.
  *
  * Term rows use class "level-N" (not "iedit" like posts).
+ * Dragging a parent moves its descendant rows with it.
  */
 ( function ( $ ) {
 	'use strict';
@@ -12,6 +13,34 @@
 
 	function termIdFromRow( row ) {
 		return String( row.id || '' ).replace( /^tag-/, '' );
+	}
+
+	function rowLevel( $row ) {
+		const match = String( $row.attr( 'class' ) || '' ).match(
+			/\blevel-(\d+)\b/
+		);
+		return match ? parseInt( match[ 1 ], 10 ) : 0;
+	}
+
+	function descendantRows( $row ) {
+		const level = rowLevel( $row );
+		const nodes = [];
+		$row.nextAll( 'tr[id^="tag-"]' ).each( function () {
+			if ( rowLevel( $( this ) ) <= level ) {
+				return false;
+			}
+			nodes.push( this );
+			return true;
+		} );
+		return $( nodes );
+	}
+
+	function attachDescendants( $row ) {
+		const $kids = $row.data( 'forwpKids' );
+		if ( $kids && $kids.length ) {
+			$row.after( $kids );
+		}
+		$row.removeData( 'forwpKids' );
 	}
 
 	function collectOrder( $tbody ) {
@@ -85,12 +114,24 @@
 				return ui;
 			},
 			start: function ( event, ui ) {
-				ui.placeholder.height( ui.item.outerHeight() );
+				const $kids = descendantRows( ui.item );
+				ui.item.data( 'forwpKids', $kids );
+
+				let extra = 0;
+				$kids.each( function () {
+					extra += $( this ).outerHeight();
+				} );
+				$kids.detach();
+
+				ui.placeholder.height( ui.item.outerHeight() + extra );
 				ui.placeholder.html(
 					'<td colspan="' +
 						ui.item.children( 'td' ).length +
 						'">&nbsp;</td>'
 				);
+			},
+			beforeStop: function ( event, ui ) {
+				attachDescendants( ui.item );
 			},
 			update: function () {
 				const order = collectOrder( $tbody );

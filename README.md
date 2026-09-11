@@ -26,6 +26,7 @@ JSON-LD works **without** the registry. The registry is for browsing, reuse trac
 - **Admin Dashboard** — classic wp-admin widgets: status, categories (tree), reused, uncategorized; Rescan from Status
 - **Drag-and-drop category order** — on **FAQ → FAQ Categories**; same order in admin lists, Dashboard, and front-end List / Categories
 - **FSE hub blocks** — List, Categories, Count, Card
+- **Collapsible category nav** — parents start closed; visitors expand them and the browser remembers
 - **Pretty category URLs** — `/current-page/term-slug/` when Settings + Categories block allow it
 - **Category SEO** — display title, SEO title (as-is when filled), SEO description
 - **Polylang** — categories follow the language of the page that owns the FAQ block
@@ -73,14 +74,14 @@ Typical layout: **Categories** in a sidebar, **List** in the main column.
 |---|---|---|
 | **4WP FAQ List** | `forwp/faq-list` | Registry questions, grouped or flat; include/exclude terms. All view shows N per group + “View all”. |
 | **4WP FAQ Card** | `forwp/faq-card` | Inner template (`inserter: false`). Accordion or heading + body; optional “Used in”. |
-| **4WP FAQ Categories** | `forwp/faq-categories` | Parent → child nav. Pretty `/page/term-slug/` or in-place filter. |
+| **4WP FAQ Categories** | `forwp/faq-categories` | Parent → child nav (subcategories collapsed by default). Pretty `/page/term-slug/` or in-place filter. |
 | **4WP FAQ Count** | `forwp/faq-count` | Live count for All / category / search (`[forwp_faq_count]`). |
 
 ### Pretty category URLs (SEO)
 
 1. **FAQ → Settings** → enable **Pretty category URLs**.
 2. On the hub page, open **4WP FAQ Categories** → enable SEO-friendly category URLs there too.
-3. Result: `/your-hub-page/term-slug/` with category Display title as H1; optional SEO title / description on the term; JSON-LD limited to that category.
+3. Result: `/your-hub-page/term-slug/`. **On-page title** comes from the category Display title (empty: category name) in these core blocks: **Title** (`core/post-title`), **Query Title** / Archive title (`core/query-title`), **Term Name** (`core/term-name`). Heading level is the template’s choice; Heading blocks are not swapped. **On-page description** comes from the category Description in **Excerpt** (`core/post-excerpt`) or **Term Description** (`core/term-description`). Document title / meta still use SEO title / SEO description. Canonical and `og:url` are the category URL. **SEO image** on the term is used for Open Graph (empty: hub page image). The List omits the group H2 when that title is already in the page heading. JSON-LD is limited to that category.
 4. Off: clicks filter the list **in place**; the page URL stays unchanged.
 
 Filled category **SEO title** is used as the document title **as-is** (no “ – site name” suffix). Empty SEO title → display title + site name.

@@ -62,9 +62,30 @@ forwp/faq-list
 |---|---|---|
 | 4WP FAQ List | `forwp/faq-list` | Grouped or flat. Include/exclude are **shared** with Categories on the same page. |
 | 4WP FAQ Card | `forwp/faq-card` | Parent: List only. Accordion or heading; optional sources; Question / Answer typography (font, size, weight, color). |
-| 4WP FAQ Categories | `forwp/faq-categories` | Nav + Interactivity filter. **All categories** = full synced list (editable label). |
+| 4WP FAQ Categories | `forwp/faq-categories` | Nav + Interactivity filter. **All categories** = full synced list (editable label). Subcategories collapse by default (block setting); visitor expand/collapse is stored in the browser. |
 
-PHP: `includes/class-display-blocks.php`, `includes/class-registry-content.php`, `includes/class-faq-filter.php`. Editor: `src/faq-list/`, `src/faq-card/`, `src/faq-categories/`, `src/display/sync-filters.js`. Front-end store: `assets/faq-view.js`.
+PHP: `includes/class-display-blocks.php`, `includes/class-registry-content.php`, `includes/class-faq-filter.php`. Editor: `src/faq-list/`, `src/faq-card/`, `src/faq-categories/`, `src/display/sync-filters.js`. Front-end store: `assets/faq-view.js`. On-page title/description swap: `includes/class-faq-terms.php`.
+
+## Hub template (pretty category URLs)
+
+On `/hub/term-slug/` the plugin fills **native theme blocks** (no extra classes, no extra FAQ blocks). Heading level is the template’s choice.
+
+**Title** (Display title, or category name if empty):
+
+- `core/post-title` — Title (page / post)
+- `core/query-title` — Query Title / Archive title (`type: archive`)
+- `core/term-name` — Term Name
+
+**Description** (native category Description field):
+
+- `core/post-excerpt` — Excerpt (the hub page’s excerpt, not items in a Query Loop)
+- `core/term-description` — Term Description (empty on `/hub/`, filled on `/hub/term-slug/`)
+
+`core/heading` is not swapped.
+
+On a pretty category URL the List does not output a group H2 for the active category (the page title already shows it). Child group titles stay.
+
+**Canonical / social:** `rel=canonical` and `og:url` are `/hub/term-slug/`. Term **SEO image** is used for Open Graph / Twitter; empty falls back to the hub page image.
 
 ## Core Search (`core/search`)
 

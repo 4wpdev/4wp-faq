@@ -15,6 +15,7 @@ WordPress.org users see [readme.txt](../../readme.txt) (`== Changelog ==`). Keep
 
 | File | When |
 |------|------|
+| `2.4.0.md` | Release **2.4.0** — collapsible FAQ category nav with remembered visitor state |
 | `2.3.0.md` | Release **2.3.0** — Dashboard, category SEO title as-is, drag-and-drop category order, compact settings |
 | `2.2.0.md` | Release **2.2.0** — hub blocks on wp.org, Count, pretty category URLs |
 | `2.1.0.md` | Release **2.1.0** — registry FAQ hub blocks (List, Card, Categories) |

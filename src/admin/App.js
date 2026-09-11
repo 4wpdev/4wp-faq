@@ -388,10 +388,18 @@ function SettingsTab() {
 					</p>
 					<ul className="forwp-faq-doc-list">
 						<li>
-							<strong>{ __( 'H1', '4wp-faq' ) }</strong>
+							<strong>{ __( 'On-page title', '4wp-faq' ) }</strong>
 							{ ' — ' }
 							{ __(
-								'Display title. Empty: category name.',
+								'Display title (empty: category name). Put a core Title (post-title), Query Title / Archive title (query-title), or Term Name (term-name). Heading level is the template’s choice. Heading blocks are not swapped.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>{ __( 'On-page description', '4wp-faq' ) }</strong>
+							{ ' — ' }
+							{ __(
+								'Category Description field. Put a core Excerpt (post-excerpt) or Term Description (term-description). Empty description: WordPress output is left as-is.',
 								'4wp-faq'
 							) }
 						</li>
@@ -399,7 +407,7 @@ function SettingsTab() {
 							<strong>{ __( 'Document title', '4wp-faq' ) }</strong>
 							{ ' — ' }
 							{ __(
-								'SEO title as-is if filled (no site-name suffix). Empty: H1 + “ – {site name}”.',
+								'SEO title as-is if filled (no site-name suffix). Empty: on-page title + “ – {site name}”.',
 								'4wp-faq'
 							) }
 						</li>
@@ -408,6 +416,22 @@ function SettingsTab() {
 							{ ' — ' }
 							{ __(
 								'SEO description. Empty: hub page default.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>{ __( 'Canonical', '4wp-faq' ) }</strong>
+							{ ' — ' }
+							{ __(
+								'The category URL (/page/term-slug/), not the hub.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>{ __( 'SEO image', '4wp-faq' ) }</strong>
+							{ ' — ' }
+							{ __(
+								'Open Graph / Twitter image on the category. Empty: hub page image.',
 								'4wp-faq'
 							) }
 						</li>

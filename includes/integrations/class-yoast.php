@@ -1,6 +1,7 @@
 <?php
 namespace ForWP\FAQ\Integrations;
 
+use ForWP\FAQ\Faq_Terms;
 use ForWP\FAQ\Plugin;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -53,8 +54,8 @@ class Yoast {
 			return $graph;
 		}
 
-		$canonical = '';
-		if ( isset( $context->canonical ) && is_string( $context->canonical ) ) {
+		$canonical = Faq_Terms::get_pretty_canonical_url();
+		if ( '' === $canonical && isset( $context->canonical ) && is_string( $context->canonical ) ) {
 			$canonical = $context->canonical;
 		}
 
@@ -113,8 +114,9 @@ class Yoast {
 				$piece['@type'] = array_values( array_unique( $types ) );
 			}
 
+			$piece['url']        = $canonical;
 			$piece['mainEntity'] = $main_entity_refs;
-			$graph[ $index ]    = $piece;
+			$graph[ $index ]     = $piece;
 			break;
 		}
 

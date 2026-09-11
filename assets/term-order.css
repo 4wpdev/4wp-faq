@@ -9,9 +9,9 @@
 }
 
 .forwp-faq-term-order-placeholder td {
-	height: 48px;
 	background: #f0f0f1;
 	border: 1px dashed #c3c4c7 !important;
+	vertical-align: middle;
 }
 
 #forwp-faq-term-order-notice {

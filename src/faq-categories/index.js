@@ -84,6 +84,7 @@ registerBlockType( 'forwp/faq-categories', {
 			showAll = true,
 			allLabel = __( 'All categories', '4wp-faq' ),
 			showCount = true,
+			collapseChildren = true,
 			seoUrls = false,
 			includeTermIds = [],
 			excludeTermIds = [],
@@ -153,6 +154,17 @@ registerBlockType( 'forwp/faq-categories', {
 							checked={ !! showCount }
 							onChange={ ( value ) =>
 								setAttributes( { showCount: !! value } )
+							}
+						/>
+						<ToggleControl
+							label={ __( 'Collapse subcategories', '4wp-faq' ) }
+							help={ __(
+								'Parents start closed. Visitors can expand them; the browser remembers their choice. The branch for the current category stays open.',
+								'4wp-faq'
+							) }
+							checked={ collapseChildren !== false }
+							onChange={ ( value ) =>
+								setAttributes( { collapseChildren: !! value } )
 							}
 						/>
 					</PanelBody>

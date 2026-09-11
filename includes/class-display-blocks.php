@@ -293,11 +293,12 @@ class Display_Blocks {
 	 * @return string
 	 */
 	public static function render_categories( $attributes ) {
-		$orientation      = isset( $attributes['orientation'] ) ? sanitize_key( (string) $attributes['orientation'] ) : 'vertical';
-		$show_all         = ! isset( $attributes['showAll'] ) || ! empty( $attributes['showAll'] );
-		$show_count       = ! isset( $attributes['showCount'] ) || ! empty( $attributes['showCount'] );
-		$seo_urls         = Settings::is_seo_urls_enabled() && ! empty( $attributes['seoUrls'] );
-		$filters          = self::resolve_shared_term_filters(
+		$orientation         = isset( $attributes['orientation'] ) ? sanitize_key( (string) $attributes['orientation'] ) : 'vertical';
+		$show_all            = ! isset( $attributes['showAll'] ) || ! empty( $attributes['showAll'] );
+		$show_count          = ! isset( $attributes['showCount'] ) || ! empty( $attributes['showCount'] );
+		$collapse_children   = ! isset( $attributes['collapseChildren'] ) || ! empty( $attributes['collapseChildren'] );
+		$seo_urls            = Settings::is_seo_urls_enabled() && ! empty( $attributes['seoUrls'] );
+		$filters             = self::resolve_shared_term_filters(
 			$attributes['includeTermIds'] ?? [],
 			$attributes['excludeTermIds'] ?? []
 		);
@@ -316,9 +317,14 @@ class Display_Blocks {
 
 		self::ensure_runtime();
 
+		$nav_class = 'forwp-faq-categories is-orientation-' . $orientation;
+		if ( $collapse_children ) {
+			$nav_class .= ' is-collapsible';
+		}
+
 		$wrapper = get_block_wrapper_attributes(
 			[
-				'class'               => 'forwp-faq-categories is-orientation-' . $orientation,
+				'class'               => $nav_class,
 				'data-wp-interactive' => self::STORE,
 			]
 		);
@@ -333,17 +339,20 @@ class Display_Blocks {
 
 		$terms  = Registry_Content::get_nav_tree( $include_term_ids, $exclude_term_ids );
 		$active = Faq_Filter::get_active_slug();
+		$label_id = function_exists( 'wp_unique_id' )
+			? wp_unique_id( 'forwp-faq-cats-label-' )
+			: 'forwp-faq-cats-label';
 
-		$html  = '<nav ' . $wrapper . ' aria-label="' . esc_attr( $nav_label ) . '">';
-		$html .= '<p class="forwp-faq-categories__label">' . esc_html( $nav_label ) . '</p>';
-		$html .= '<ul class="forwp-faq-categories__list">';
+		$html  = '<nav ' . $wrapper . ' aria-labelledby="' . esc_attr( $label_id ) . '">';
+		$html .= '<p class="forwp-faq-categories__label" id="' . esc_attr( $label_id ) . '">' . esc_html( $nav_label ) . '</p>';
+		$html .= '<ul class="forwp-faq-categories__list" role="list">';
 
 		if ( $show_all ) {
 			$all_url = Faq_Filter::get_nav_url( '', $seo_urls );
 			$html   .= self::render_category_item( '', $all_label, $all_url, $seo_urls, $active, null );
 		}
 
-		$html .= self::render_category_nodes( $terms, $seo_urls, $active, $show_count );
+		$html .= self::render_category_nodes( $terms, $seo_urls, $active, $show_count, $collapse_children );
 
 		$html .= '</ul>';
 
@@ -885,7 +894,12 @@ class Display_Blocks {
 					'ancestors' => implode( ' ', $ancestors ),
 				]
 			) . ' data-wp-bind--hidden="!state.isGroupVisible"' . ( $hidden ? ' hidden' : '' ) . '>';
-			$html .= '<h2 class="forwp-faq-list__group-title">' . esc_html( $title ) . '</h2>';
+
+			$seo_term = Faq_Terms::get_seo_term();
+			$omit_title = $seo_term instanceof \WP_Term && $slug === $seo_term->slug;
+			if ( ! $omit_title ) {
+				$html .= '<h2 class="forwp-faq-list__group-title">' . esc_html( $title ) . '</h2>';
+			}
 			if ( ! empty( $posts ) ) {
 				$html .= self::render_items( $posts, $card_attrs );
 				if ( $truncated && $term instanceof \WP_Term ) {
@@ -1073,13 +1087,14 @@ class Display_Blocks {
 	/**
 	 * Nested category nav items.
 	 *
-	 * @param list<array{term: \WP_Term, children: array}> $nodes     Tree.
-	 * @param bool                                           $seo_urls Pretty permalinks.
-	 * @param string                                         $active   Active slug.
-	 * @param bool                                           $show_count Show counts.
+	 * @param list<array{term: \WP_Term, children: array}> $nodes              Tree.
+	 * @param bool                                           $seo_urls           Pretty permalinks.
+	 * @param string                                         $active             Active slug.
+	 * @param bool                                           $show_count         Show counts.
+	 * @param bool                                           $collapse_children  Collapse nested lists by default.
 	 * @return string
 	 */
-	private static function render_category_nodes( $nodes, $seo_urls, $active, $show_count ) {
+	private static function render_category_nodes( $nodes, $seo_urls, $active, $show_count, $collapse_children = true ) {
 		$html = '';
 
 		foreach ( $nodes as $node ) {
@@ -1093,12 +1108,23 @@ class Display_Blocks {
 			if ( $show_count ) {
 				$count = isset( $node['inclusive_count'] ) ? (int) $node['inclusive_count'] : (int) $term->count;
 			}
-			$children = isset( $node['children'] ) && is_array( $node['children'] ) ? $node['children'] : [];
-			$inner    = '';
+			$children     = isset( $node['children'] ) && is_array( $node['children'] ) ? $node['children'] : [];
+			$has_children = ! empty( $children );
+			$force_open   = $collapse_children && $has_children && self::nav_node_contains_slug( $node, $active );
+			$inner        = '';
+			$children_id  = '';
 
-			if ( ! empty( $children ) ) {
-				$inner  = '<ul class="forwp-faq-categories__children">';
-				$inner .= self::render_category_nodes( $children, $seo_urls, $active, $show_count );
+			if ( $has_children ) {
+				$children_id = 'forwp-faq-cat-children-' . sanitize_html_class( $term->slug );
+				$inner       = '<ul class="forwp-faq-categories__children" role="list" id="' . esc_attr( $children_id ) . '"';
+				if ( $collapse_children ) {
+					$inner .= ' data-wp-bind--hidden="state.isBranchHidden"';
+					if ( ! $force_open && ! self::is_editor_render() ) {
+						$inner .= ' hidden';
+					}
+				}
+				$inner .= '>';
+				$inner .= self::render_category_nodes( $children, $seo_urls, $active, $show_count, $collapse_children );
 				$inner .= '</ul>';
 			}
 
@@ -1110,11 +1136,50 @@ class Display_Blocks {
 				$active,
 				$count,
 				$inner,
-				! empty( $children )
+				$has_children,
+				$collapse_children,
+				$force_open,
+				$children_id
 			);
 		}
 
 		return $html;
+	}
+
+	/**
+	 * Whether this nav node or a descendant matches the active slug.
+	 *
+	 * @param array{term?: \WP_Term, children?: array} $node Tree node.
+	 * @param string                                   $slug Active slug.
+	 * @return bool
+	 */
+	private static function nav_node_contains_slug( $node, $slug ) {
+		if ( ! is_string( $slug ) || '' === $slug ) {
+			return false;
+		}
+
+		$term = $node['term'] ?? null;
+		if ( $term instanceof \WP_Term && $term->slug === $slug ) {
+			return true;
+		}
+
+		$children = isset( $node['children'] ) && is_array( $node['children'] ) ? $node['children'] : [];
+		foreach ( $children as $child ) {
+			if ( self::nav_node_contains_slug( $child, $slug ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Block editor / REST preview: keep nested lists visible so the tree can be inspected.
+	 *
+	 * @return bool
+	 */
+	private static function is_editor_render() {
+		return defined( 'REST_REQUEST' ) && REST_REQUEST;
 	}
 
 	/**
@@ -1138,23 +1203,41 @@ class Display_Blocks {
 	/**
 	 * One category nav item.
 	 *
-	 * @param string   $slug        Term slug (empty = all).
-	 * @param string   $label       Label.
-	 * @param string   $url         Href.
-	 * @param bool     $seo_urls    Pretty permalinks.
-	 * @param string   $active      Active slug.
-	 * @param int|null $count       Optional count.
-	 * @param string   $inner       Optional nested list HTML.
-	 * @param bool     $has_children Whether the item has children.
+	 * @param string   $slug               Term slug (empty = all).
+	 * @param string   $label              Label.
+	 * @param string   $url                Href.
+	 * @param bool     $seo_urls           Pretty permalinks.
+	 * @param string   $active             Active slug.
+	 * @param int|null $count              Optional count.
+	 * @param string   $inner              Optional nested list HTML.
+	 * @param bool     $has_children       Whether the item has children.
+	 * @param bool     $collapse_children  Collapse nested lists by default.
+	 * @param bool     $force_open         Keep this branch open (active descendant).
+	 * @param string   $children_id        Nested list id for aria-controls.
 	 * @return string
 	 */
-	private static function render_category_item( $slug, $label, $url, $seo_urls, $active, $count, $inner = '', $has_children = false ) {
-		$is_active = ( $slug === $active );
-		$context   = self::context_attr(
+	private static function render_category_item(
+		$slug,
+		$label,
+		$url,
+		$seo_urls,
+		$active,
+		$count,
+		$inner = '',
+		$has_children = false,
+		$collapse_children = false,
+		$force_open = false,
+		$children_id = ''
+	) {
+		$is_active    = ( $slug === $active );
+		$is_collapsible = $has_children && $collapse_children;
+		$context      = self::context_attr(
 			[
-				'slug'    => $slug,
-				'url'     => $url,
-				'seoUrls' => (bool) $seo_urls,
+				'slug'              => $slug,
+				'url'               => $url,
+				'seoUrls'           => (bool) $seo_urls,
+				'collapseChildren'  => (bool) $is_collapsible,
+				'forceOpen'         => (bool) $force_open,
 			]
 		);
 
@@ -1165,14 +1248,49 @@ class Display_Blocks {
 		if ( $has_children ) {
 			$classes .= ' has-children';
 		}
+		if ( $is_collapsible && $force_open ) {
+			$classes .= ' is-expanded';
+		}
 
-		$html  = '<li class="' . esc_attr( $classes ) . '"' . $context . ' data-wp-class--is-active="state.isNavActive">';
-		$html .= '<a class="forwp-faq-categories__link" href="' . esc_url( $url ) . '" data-faq-cat="' . esc_attr( $slug ) . '" data-wp-on--click="actions.selectCategory">';
-		$html .= '<span class="forwp-faq-categories__term">' . esc_html( $label ) . '</span>';
-		if ( null !== $count ) {
+		$html  = '<li class="' . esc_attr( $classes ) . '"' . $context . ' data-wp-class--is-active="state.isNavActive"';
+		if ( $is_collapsible ) {
+			$html .= ' data-wp-class--is-expanded="state.isBranchOpen"';
+		}
+		$html .= '>';
+
+		$link  = '<a class="forwp-faq-categories__link" href="' . esc_url( $url ) . '" data-faq-cat="' . esc_attr( $slug ) . '" data-wp-on--click="actions.selectCategory" data-wp-bind--aria-current="state.navAriaCurrent"';
+		if ( $is_active ) {
+			$link .= ' aria-current="page"';
+		}
+		$link .= '>';
+		$link .= '<span class="forwp-faq-categories__term">' . esc_html( $label ) . '</span>';
+		if ( null !== $count && ! $collapse_children ) {
+			$link .= '<span class="forwp-faq-categories__count">' . esc_html( (string) $count ) . '</span>';
+		}
+		$link .= '</a>';
+
+		$html .= $link;
+
+		if ( $is_collapsible ) {
+			$html .= '<button type="button" class="forwp-faq-categories__toggle"';
+			$html .= ' data-wp-on--click="actions.toggleBranch"';
+			$html .= ' data-wp-bind--aria-expanded="state.isBranchOpen"';
+			$html .= ' aria-expanded="' . ( $force_open ? 'true' : 'false' ) . '"';
+			if ( '' !== $children_id ) {
+				$html .= ' aria-controls="' . esc_attr( $children_id ) . '"';
+			}
+			$html .= ' aria-label="' . esc_attr(
+				/* translators: %s: FAQ category name */
+				sprintf( __( '%s submenu', '4wp-faq' ), $label )
+			) . '">';
+			$html .= '<svg class="forwp-faq-categories__chevron" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M4 2.2 8.3 6 4 9.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+			$html .= '</button>';
+		}
+
+		if ( null !== $count && $collapse_children ) {
 			$html .= '<span class="forwp-faq-categories__count">' . esc_html( (string) $count ) . '</span>';
 		}
-		$html .= '</a>';
+
 		$html .= $inner;
 		$html .= '</li>';
 
@@ -1209,6 +1327,7 @@ class Display_Blocks {
 				'category'       => $context['activeSlug'],
 				'search'         => '',
 				'visibleCount'   => $count,
+				'openBranches'   => (object) [],
 				'isNavActive'    => static function () {
 					$state    = wp_interactivity_state( 'forwp/faq' );
 					$context  = wp_interactivity_get_context( 'forwp/faq' );
@@ -1216,6 +1335,30 @@ class Display_Blocks {
 					$slug     = isset( $context['slug'] ) ? (string) $context['slug'] : '';
 
 					return $category === $slug;
+				},
+				'navAriaCurrent' => static function () {
+					$state    = wp_interactivity_state( 'forwp/faq' );
+					$context  = wp_interactivity_get_context( 'forwp/faq' );
+					$category = isset( $state['category'] ) ? (string) $state['category'] : '';
+					$slug     = isset( $context['slug'] ) ? (string) $context['slug'] : '';
+
+					return $category === $slug ? 'page' : null;
+				},
+				'isBranchOpen'   => static function () {
+					$context = wp_interactivity_get_context( 'forwp/faq' );
+					if ( empty( $context['collapseChildren'] ) ) {
+						return true;
+					}
+
+					return ! empty( $context['forceOpen'] );
+				},
+				'isBranchHidden' => static function () {
+					$context = wp_interactivity_get_context( 'forwp/faq' );
+					if ( empty( $context['collapseChildren'] ) ) {
+						return false;
+					}
+
+					return empty( $context['forceOpen'] );
 				},
 				'isGroupVisible' => static function () {
 					$state    = wp_interactivity_state( 'forwp/faq' );

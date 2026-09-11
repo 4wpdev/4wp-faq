@@ -27,6 +27,78 @@
 	gap: 0.35rem;
 }
 
+.forwp-faq-categories.is-collapsible .forwp-faq-categories__item {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 1.75rem minmax(2.25em, max-content);
+	align-items: center;
+}
+
+.forwp-faq-categories.is-collapsible .forwp-faq-categories__link {
+	grid-column: 1;
+	min-width: 0;
+	justify-content: flex-start;
+}
+
+.forwp-faq-categories.is-collapsible .forwp-faq-categories__toggle {
+	grid-column: 2;
+	grid-row: 1;
+	justify-self: center;
+}
+
+.forwp-faq-categories.is-collapsible .forwp-faq-categories__count {
+	grid-column: 3;
+	grid-row: 1;
+	justify-self: end;
+	min-width: 1.5em;
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+
+.forwp-faq-categories.is-collapsible .forwp-faq-categories__children {
+	grid-column: 1 / -1;
+}
+
+.forwp-faq-categories__toggle {
+	all: unset;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: 0.25rem;
+	background: transparent;
+	color: inherit;
+	line-height: 0;
+	cursor: pointer;
+}
+
+.forwp-faq-categories__toggle:hover,
+.forwp-faq-categories__toggle:focus-visible {
+	outline: none;
+	background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.forwp-faq-categories__chevron {
+	display: block;
+	width: 0.75rem;
+	height: 0.75rem;
+	border: 0;
+	transform: rotate(0deg);
+	transform-origin: 50% 50%;
+	transition: transform 0.15s ease;
+	fill: none;
+	stroke: currentColor;
+	pointer-events: none;
+}
+
+.forwp-faq-categories__item.is-expanded > .forwp-faq-categories__toggle .forwp-faq-categories__chevron {
+	transform: rotate(90deg);
+}
+
 .forwp-faq-categories__children {
 	margin: 0;
 	padding: 0 0 0 0.85rem;
@@ -51,6 +123,11 @@
 .forwp-faq-categories.is-orientation-horizontal .forwp-faq-categories__link {
 	padding: 0.4rem 0.75rem;
 	border: 1px solid currentColor;
+}
+
+.forwp-faq-categories.is-orientation-horizontal .forwp-faq-categories__toggle {
+	width: 1.5rem;
+	height: 1.5rem;
 }
 
 .forwp-faq-categories__item.is-active .forwp-faq-categories__link,

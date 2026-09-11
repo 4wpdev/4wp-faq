@@ -4,7 +4,30 @@
  * Do not initialize `category` / `search` here: client defaults overwrite
  * server state from wp_interactivity_state() (direct /page/term-slug/ loads).
  */
-import { store, getContext } from '@wordpress/interactivity';
+import { store, getContext, withSyncEvent } from '@wordpress/interactivity';
+
+const OPEN_BRANCHES_KEY = 'forwp-faq-cat-open';
+
+const readOpenBranches = () => {
+	try {
+		const raw = window.localStorage.getItem( OPEN_BRANCHES_KEY );
+		const parsed = raw ? JSON.parse( raw ) : {};
+		if ( ! parsed || typeof parsed !== 'object' || Array.isArray( parsed ) ) {
+			return {};
+		}
+		return parsed;
+	} catch ( e ) {
+		return {};
+	}
+};
+
+const writeOpenBranches = ( map ) => {
+	try {
+		window.localStorage.setItem( OPEN_BRANCHES_KEY, JSON.stringify( map ) );
+	} catch ( e ) {
+		// Private mode / quota — keep the in-memory state either way.
+	}
+};
 
 const categoryFromLocation = () => {
 	const params = new URLSearchParams( window.location.search || '' );
@@ -45,9 +68,30 @@ const countVisibleCards = () => {
 
 const { state } = store( 'forwp/faq', {
 	state: {
+		openBranches: readOpenBranches(),
 		get isNavActive() {
 			const ctx = getContext() || {};
 			return ( state.category || '' ) === ( ctx.slug || '' );
+		},
+		get navAriaCurrent() {
+			return state.isNavActive ? 'page' : null;
+		},
+		get isBranchOpen() {
+			const ctx = getContext() || {};
+			if ( ! ctx.collapseChildren ) {
+				return true;
+			}
+			const slug = ctx.slug || '';
+			if (
+				state.openBranches &&
+				Object.prototype.hasOwnProperty.call( state.openBranches, slug )
+			) {
+				return !! state.openBranches[ slug ];
+			}
+			return !! ctx.forceOpen;
+		},
+		get isBranchHidden() {
+			return ! state.isBranchOpen;
 		},
 		get isGroupVisible() {
 			const ctx = getContext() || {};
@@ -74,6 +118,28 @@ const { state } = store( 'forwp/faq', {
 		},
 	},
 	actions: {
+		toggleBranch: withSyncEvent( ( event ) => {
+			if ( event && typeof event.preventDefault === 'function' ) {
+				event.preventDefault();
+			}
+			if ( event && typeof event.stopPropagation === 'function' ) {
+				event.stopPropagation();
+			}
+			const ctx = getContext() || {};
+			if ( ! ctx.collapseChildren ) {
+				return;
+			}
+			const slug = ctx.slug || '';
+			if ( ! slug ) {
+				return;
+			}
+			const next = {
+				...( state.openBranches || {} ),
+				[ slug ]: ! state.isBranchOpen,
+			};
+			state.openBranches = next;
+			writeOpenBranches( next );
+		} ),
 		selectCategory( event ) {
 			const ctx = getContext() || {};
 			if ( ctx.seoUrls ) {
