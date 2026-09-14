@@ -1,6 +1,7 @@
 <?php
 namespace ForWP\FAQ;
 
+use ForWP\FAQ\Ai\Term_Description;
 use ForWP\FAQ\Integrations\Polylang;
 use ForWP\FAQ\Integrations\Yoast;
 
@@ -25,6 +26,7 @@ class Plugin {
 		Yoast::init();
 		Display_Blocks::init();
 		Faq_Terms::init();
+		Term_Description::init();
 		Term_Order::init();
 
 		add_action( 'init', [ __CLASS__, 'register_block' ] );

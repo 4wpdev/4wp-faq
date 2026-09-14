@@ -24,6 +24,7 @@ function get_required_include_files(): array {
 		'includes/class-display-blocks.php',
 		'includes/class-category-resolver.php',
 		'includes/class-faq-terms.php',
+		'ai/load.php',
 		'includes/class-term-order.php',
 		'includes/integrations/class-polylang.php',
 		'includes/integrations/class-yoast.php',

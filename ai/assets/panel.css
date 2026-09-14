@@ -1,0 +1,211 @@
+#forwp-ai-root {
+	overflow: visible;
+	pointer-events: none;
+}
+
+#forwp-ai-root > * {
+	pointer-events: auto;
+}
+
+.forwp-ai-fab-wrap {
+	position: fixed;
+	left: 20px;
+	bottom: 20px;
+	z-index: 99994;
+	width: 48px;
+	height: 48px;
+	overflow: visible;
+}
+
+.forwp-ai-fab {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 48px;
+	height: 48px;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: var(--wp-admin-theme-color, #3858e9);
+	color: #fff;
+	box-shadow: 0 4px 16px rgb(0 0 0 / 24%);
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.forwp-ai-fab-wrap:hover .forwp-ai-fab,
+.forwp-ai-fab:focus-visible {
+	transform: scale(1.05);
+	box-shadow: 0 6px 20px rgb(0 0 0 / 28%);
+}
+
+.forwp-ai-fab:disabled {
+	cursor: wait;
+	opacity: 0.7;
+	transform: none;
+}
+
+.forwp-ai-fab svg {
+	pointer-events: none;
+}
+
+.forwp-ai-stack {
+	position: fixed;
+	left: 20px;
+	bottom: 84px;
+	z-index: 99991;
+	display: flex;
+	flex-direction: column;
+	width: min(380px, calc(100vw - 40px));
+	max-height: min(calc(100vh - 104px), 720px);
+	overflow: hidden;
+	border-radius: 12px;
+	background: #fff;
+	box-shadow: 0 10px 40px rgb(0 0 0 / 16%);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+.forwp-ai-stack[hidden] {
+	display: none;
+}
+
+.forwp-ai-stack.is-dragging {
+	user-select: none;
+}
+
+.forwp-ai-panel {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-height: 0;
+	padding: 0 12px 12px;
+	overflow: auto;
+}
+
+.forwp-ai-panel__head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-shrink: 0;
+	padding: 10px 0 8px;
+	cursor: grab;
+	touch-action: none;
+}
+
+.forwp-ai-stack.is-dragging .forwp-ai-panel__head {
+	cursor: grabbing;
+}
+
+.forwp-ai-panel__drag {
+	flex-shrink: 0;
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+	line-height: 1;
+	color: #8c8f94;
+	pointer-events: none;
+}
+
+.forwp-ai-panel__title {
+	flex: 1 1 auto;
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.25;
+	color: #1d2327;
+}
+
+.forwp-ai-label {
+	display: block;
+	margin: 10px 0 4px;
+	font-size: 12px;
+	font-weight: 600;
+	color: #50575e;
+}
+
+.forwp-ai-actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 2px;
+	margin: 4px 0 0;
+}
+
+.forwp-ai-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: #1d2327;
+	cursor: pointer;
+}
+
+.forwp-ai-icon:hover,
+.forwp-ai-icon:focus-visible {
+	background: #f0f0f1;
+	color: #1d2327;
+}
+
+.forwp-ai-icon.forwp-ai-send,
+.forwp-ai-icon.forwp-ai-send-refine,
+.forwp-ai-icon.forwp-ai-apply {
+	color: var(--wp-admin-theme-color, #3858e9);
+}
+
+.forwp-ai-icon:disabled {
+	cursor: wait;
+	opacity: 0.45;
+}
+
+.forwp-ai-icon .dashicons {
+	width: 18px;
+	height: 18px;
+	font-size: 18px;
+	line-height: 1;
+}
+
+.forwp-ai-prompt,
+.forwp-ai-result,
+.forwp-ai-refine {
+	width: 100%;
+	max-width: 100%;
+	margin: 0;
+	padding: 8px 10px;
+	border: 1px solid #8c8f94;
+	border-radius: 0;
+	font-size: 13px;
+	line-height: 1.45;
+	resize: vertical;
+	box-sizing: border-box;
+}
+
+.forwp-ai-prompt {
+	min-height: 140px;
+}
+
+.forwp-ai-result {
+	min-height: 88px;
+}
+
+.forwp-ai-status {
+	min-height: 1.4em;
+	margin: 10px 0 0;
+	font-size: 12px;
+	color: #50575e;
+}
+
+@media (max-width: 782px) {
+	.forwp-ai-fab-wrap,
+	.forwp-ai-stack {
+		left: 12px;
+	}
+
+	.forwp-ai-stack {
+		width: min(380px, calc(100vw - 24px));
+	}
+}
