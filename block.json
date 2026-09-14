@@ -36,6 +36,44 @@
       "default": ""
     }
   },
+  "example": {
+    "attributes": {
+      "jsonLd": "",
+      "categoryMode": "none",
+      "categoryTermIds": [],
+      "categoryTermId": 0,
+      "categoryName": ""
+    },
+    "innerBlocks": [
+      {
+        "name": "core/accordion",
+        "innerBlocks": [
+          {
+            "name": "core/accordion-item",
+            "innerBlocks": [
+              {
+                "name": "core/accordion-heading",
+                "attributes": {
+                  "content": "Question"
+                }
+              },
+              {
+                "name": "core/accordion-panel",
+                "innerBlocks": [
+                  {
+                    "name": "core/paragraph",
+                    "attributes": {
+                      "content": "Answer"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
   "editorScript": "file:./build/index.js"
 }
 

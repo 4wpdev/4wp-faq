@@ -13,5 +13,8 @@
 		"className": true,
 		"interactivity": true
 	},
+	"example": {
+		"attributes": {}
+	},
 	"editorScript": "file:../../build/faq-count.js"
 }

@@ -1,6 +1,145 @@
 # Block structure (4WP FAQ)
 
+Для агента: тут повний інвентар блоків/шорткодів цього плагіна; атрибути звіряй з block.json; для рендеру поза редактором — render_callback викликається напряму.
+
 4WP FAQ does **not** replace core blocks. It adds a thin **`forwp/faq`** wrapper so schema, aggregation, and the FAQ registry can read your existing layout.
+
+## Shortcodes
+
+| Tag | Block analog |
+|-----|----------------|
+| `[forwp_faq_count]` | `forwp/faq-count` |
+
+List/Categories — block-only, немає шорткод-аналога.
+
+Source: `includes/class-display-blocks.php` (`add_shortcode( 'forwp_faq_count', … )`). No attributes.
+
+## Attributes (from block.json)
+
+Copy of `attributes` in each `block.json`. Do not invent keys.
+
+### `forwp/faq` — `block.json`
+
+| Attribute | Type | Default | Items |
+|-----------|------|---------|-------|
+| `jsonLd` | string | `""` | |
+| `categoryMode` | string | `"none"` | |
+| `categoryTermIds` | array | `[]` | number |
+| `categoryTermId` | number | `0` | |
+| `categoryName` | string | `""` | |
+
+`jsonLd`: `""` (site default), `"enable"`, `"disable"`. `categoryMode`: `"none"`, `"existing"`, `"new"`.
+
+### `forwp/faq-list` — `blocks/faq-list/block.json`
+
+| Attribute | Type | Default | Items |
+|-----------|------|---------|-------|
+| `layout` | string | `"grouped"` | |
+| `includeTermIds` | array | `[]` | number |
+| `excludeTermIds` | array | `[]` | number |
+| `cardDisplayMode` | string | `"accordion"` | |
+| `cardShowSources` | boolean | `false` | |
+| `cardSourcesLabel` | string | `"Used in"` | |
+| `cardShowPostType` | boolean | `false` | |
+| `cardQuestionStyle` | object | `{}` | |
+| `cardAnswerStyle` | object | `{}` | |
+
+`layout`: `"grouped"` \| `"flat"`. Inner block: `forwp/faq-card`.
+
+### `forwp/faq-card` — `blocks/faq-card/block.json`
+
+Parent: `forwp/faq-list`. `inserter: false`. `usesContext`: `postId`, `postType`.
+
+| Attribute | Type | Default |
+|-----------|------|---------|
+| `displayMode` | string | `"accordion"` |
+| `showSources` | boolean | `false` |
+| `sourcesLabel` | string | `"Used in"` |
+| `showPostType` | boolean | `false` |
+| `questionStyle` | object | `{}` |
+| `answerStyle` | object | `{}` |
+
+`displayMode`: `"accordion"` \| `"heading"`.
+
+### `forwp/faq-categories` — `blocks/faq-categories/block.json`
+
+| Attribute | Type | Default | Items |
+|-----------|------|---------|-------|
+| `orientation` | string | `"vertical"` | |
+| `label` | string | `"Categories"` | |
+| `showAll` | boolean | `true` | |
+| `allLabel` | string | `"All categories"` | |
+| `showCount` | boolean | `true` | |
+| `collapseChildren` | boolean | `true` | |
+| `seoUrls` | boolean | `false` | |
+| `includeTermIds` | array | `[]` | number |
+| `excludeTermIds` | array | `[]` | number |
+
+`orientation`: `"vertical"` \| `"horizontal"`.
+
+### `forwp/faq-count` — `blocks/faq-count/block.json`
+
+No `attributes` in `block.json`.
+
+## Render outside the editor (`render_block()`)
+
+Dynamic blocks call `render_callback` on the server. Use this from a theme template or custom CPT template (no editor, no `post_content`).
+
+```php
+echo render_block(
+	array(
+		'blockName' => 'forwp/faq-categories',
+		'attrs'     => array(
+			'orientation'      => 'vertical',
+			'label'            => 'Categories',
+			'showAll'          => true,
+			'allLabel'         => 'All categories',
+			'showCount'        => true,
+			'collapseChildren' => true,
+			'seoUrls'          => false,
+			'includeTermIds'   => array(),
+			'excludeTermIds'   => array(),
+		),
+	)
+);
+
+echo render_block(
+	array(
+		'blockName' => 'forwp/faq-count',
+		'attrs'     => array(),
+	)
+);
+
+echo render_block(
+	array(
+		'blockName'   => 'forwp/faq-list',
+		'attrs'       => array(
+			'layout'            => 'grouped',
+			'includeTermIds'    => array(),
+			'excludeTermIds'    => array(),
+			'cardDisplayMode'   => 'accordion',
+			'cardShowSources'   => false,
+			'cardSourcesLabel'  => 'Used in',
+			'cardShowPostType'  => false,
+			'cardQuestionStyle' => array(),
+			'cardAnswerStyle'   => array(),
+		),
+		'innerBlocks' => array(
+			array(
+				'blockName' => 'forwp/faq-card',
+				'attrs'     => array(
+					'displayMode'   => 'accordion',
+					'showSources'   => false,
+					'sourcesLabel'  => 'Used in',
+					'showPostType'  => false,
+					'questionStyle' => array(),
+					'answerStyle'   => array(),
+				),
+			),
+		),
+	)
+);
+```
 
 ## Recommended (WordPress 6.x — core Accordion)
 

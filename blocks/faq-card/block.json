@@ -42,6 +42,16 @@
 			"default": {}
 		}
 	},
+	"example": {
+		"attributes": {
+			"displayMode": "accordion",
+			"showSources": false,
+			"sourcesLabel": "Used in",
+			"showPostType": false,
+			"questionStyle": {},
+			"answerStyle": {}
+		}
+	},
 	"editorScript": "file:../../build/faq-card.js",
 	"style": "file:../../build/style-faq-card.css",
 	"editorStyle": "file:../../build/style-faq-card.css"

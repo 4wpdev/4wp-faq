@@ -58,6 +58,32 @@
 			"default": {}
 		}
 	},
+	"example": {
+		"attributes": {
+			"layout": "grouped",
+			"includeTermIds": [],
+			"excludeTermIds": [],
+			"cardDisplayMode": "accordion",
+			"cardShowSources": false,
+			"cardSourcesLabel": "Used in",
+			"cardShowPostType": false,
+			"cardQuestionStyle": {},
+			"cardAnswerStyle": {}
+		},
+		"innerBlocks": [
+			{
+				"name": "forwp/faq-card",
+				"attributes": {
+					"displayMode": "accordion",
+					"showSources": false,
+					"sourcesLabel": "Used in",
+					"showPostType": false,
+					"questionStyle": {},
+					"answerStyle": {}
+				}
+			}
+		]
+	},
 	"editorScript": "file:../../build/faq-list.js",
 	"style": "file:../../build/style-faq-list.css",
 	"editorStyle": "file:../../build/style-faq-list.css"

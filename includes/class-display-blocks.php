@@ -38,6 +38,13 @@ class Display_Blocks {
 		add_action( 'init', [ __CLASS__, 'register_blocks' ] );
 		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'localize_editor_scripts' ], 20 );
 		add_filter( 'render_block_core/search', [ __CLASS__, 'render_related_search' ], 10, 2 );
+		/**
+		 * Shortcode [forwp_faq_count]. Same live number as block `forwp/faq-count`.
+		 *
+		 * @param array $atts {
+		 *     Shortcode attributes. None supported. Count follows the FAQ List on the same page.
+		 * }
+		 */
 		add_shortcode( 'forwp_faq_count', [ __CLASS__, 'shortcode_count' ] );
 	}
 
@@ -399,9 +406,12 @@ class Display_Blocks {
 	/**
 	 * Shortcode [forwp_faq_count] — same live number as 4WP FAQ Count.
 	 *
+	 * @param array|string $atts Shortcode attributes. None supported.
 	 * @return string
 	 */
-	public static function shortcode_count() {
+	public static function shortcode_count( $atts = [] ) {
+		unset( $atts );
+
 		return self::render_count( [] );
 	}
 
