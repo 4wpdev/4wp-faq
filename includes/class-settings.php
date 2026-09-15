@@ -23,6 +23,9 @@ class Settings {
 	/** Pretty /current-page/term-slug/ category URLs. Off: in-place filter, URL unchanged. */
 	public const OPTION_SEO_URLS = 'forwp_faq_seo_urls';
 
+	/** Allow the predefined AI field map (category Description, titles, meta). */
+	public const OPTION_AI_FIELD_MARKUP = 'forwp_faq_ai_field_markup';
+
 	public const DEFAULT_PREVIEW_PER_CATEGORY = 5;
 
 	public const STATUS_PENDING  = 'pending';
@@ -169,6 +172,31 @@ class Settings {
 	 */
 	public static function set_seo_urls( $enabled ) {
 		update_option( self::OPTION_SEO_URLS, $enabled ? 1 : 0 );
+	}
+
+	/**
+	 * Site owner allowed predefined AI field markup on FAQ categories.
+	 */
+	public static function is_ai_field_markup_enabled() {
+		return (bool) get_option( self::OPTION_AI_FIELD_MARKUP, false );
+	}
+
+	/**
+	 * @param bool $enabled Whether the AI panel may fill mapped category fields.
+	 */
+	public static function set_ai_field_markup( $enabled ) {
+		update_option( self::OPTION_AI_FIELD_MARKUP, $enabled ? 1 : 0 );
+	}
+
+	/**
+	 * Connector is active and field markup is allowed.
+	 */
+	public static function can_use_ai_field_markup() {
+		if ( ! self::is_ai_field_markup_enabled() ) {
+			return false;
+		}
+
+		return class_exists( \ForWP\AI\Client::class ) && \ForWP\AI\Client::is_available();
 	}
 
 	/**

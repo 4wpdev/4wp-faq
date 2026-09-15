@@ -1,12 +1,13 @@
 <?php
 /**
- * FAQ case: generate core term Description.
+ * FAQ case: generate category copy (description + titles + meta).
  *
  * @package ForWP\FAQ
  */
 
 namespace ForWP\FAQ\Ai;
 
+use ForWP\FAQ\Faq_Terms;
 use ForWP\FAQ\Settings;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -14,9 +15,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Field + prompt for FAQ category Description.
+ * Entity case: FAQ category fields from one prompt.
  */
 class Term_Description {
+	/**
+	 * JSON keys mapped to form fields.
+	 *
+	 * @return list<array{id: string, field: string, label: string}>
+	 */
+	public static function slots() {
+		return [
+			[
+				'id'    => 'description',
+				'field' => '#description',
+				'label' => __( 'Description', '4wp-faq' ),
+			],
+			[
+				'id'    => 'display_title',
+				'field' => '#forwp_display_title',
+				'label' => __( 'Display title', '4wp-faq' ),
+			],
+			[
+				'id'    => 'seo_title',
+				'field' => '#forwp_seo_title',
+				'label' => __( 'SEO title', '4wp-faq' ),
+			],
+			[
+				'id'    => 'seo_description',
+				'field' => '#forwp_seo_description',
+				'label' => __( 'SEO description', '4wp-faq' ),
+			],
+		];
+	}
+
 	/**
 	 * Hooks.
 	 */
@@ -31,7 +62,7 @@ class Term_Description {
 	public static function register_routes() {
 		register_rest_route(
 			'forwp-faq/v1',
-			'/terms/(?P<id>\d+)/description-prompt',
+			'/terms/(?P<id>\d+)/ai-prompt',
 			[
 				'methods'             => \WP_REST_Server::READABLE,
 				'callback'            => [ __CLASS__, 'get_prompt' ],
@@ -48,10 +79,10 @@ class Term_Description {
 
 		register_rest_route(
 			'forwp-faq/v1',
-			'/terms/(?P<id>\d+)/generate-description',
+			'/terms/(?P<id>\d+)/ai-generate',
 			[
 				'methods'             => \WP_REST_Server::CREATABLE,
-				'callback'            => [ __CLASS__, 'generate_description' ],
+				'callback'            => [ __CLASS__, 'generate_fields' ],
 				'permission_callback' => [ __CLASS__, 'can_edit_term' ],
 				'args'                => [
 					'id'     => [
@@ -102,7 +133,7 @@ class Term_Description {
 			return;
 		}
 
-		if ( ! \ForWP\AI\Client::is_available() ) {
+		if ( ! Settings::can_use_ai_field_markup() ) {
 			return;
 		}
 
@@ -120,28 +151,28 @@ class Term_Description {
 
 		\ForWP\AI\Panel::enqueue(
 			[
-				'field'         => '#description',
-				'prompt_path'   => '/forwp-faq/v1/terms/' . $term_id . '/description-prompt',
-				'generate_path' => '/forwp-faq/v1/terms/' . $term_id . '/generate-description',
+				'slots'         => self::slots(),
+				'prompt_path'   => '/forwp-faq/v1/terms/' . $term_id . '/ai-prompt',
+				'generate_path' => '/forwp-faq/v1/terms/' . $term_id . '/ai-generate',
 				'i18n'          => [
 					'generate' => __( 'Generate with AI', '4wp-faq' ),
 					'fab'      => __( 'AI prompt', '4wp-faq' ),
-					'title'    => __( 'Description prompt', '4wp-faq' ),
+					'title'    => __( 'Category copy', '4wp-faq' ),
 					'prompt'   => __( 'Prompt', '4wp-faq' ),
-					'result'   => __( 'Result', '4wp-faq' ),
 					'send'     => __( 'Send', '4wp-faq' ),
 					'clear'    => __( 'Clear', '4wp-faq' ),
 					'restore'  => __( 'Restore default', '4wp-faq' ),
-					'apply'    => __( 'Apply to Description', '4wp-faq' ),
+					'apply'    => __( 'Apply', '4wp-faq' ),
+					'applyAll' => __( 'Apply all', '4wp-faq' ),
 					'refine'   => __( 'Refine', '4wp-faq' ),
 					'close'    => __( 'Close', '4wp-faq' ),
 					'move'     => __( 'Drag to move', '4wp-faq' ),
 					'working'  => __( 'Generating…', '4wp-faq' ),
 					'loading'  => __( 'Loading prompt…', '4wp-faq' ),
-					'done'     => __( 'Inserted into Description. Review, then Update.', '4wp-faq' ),
-					'confirm'  => __( 'Replace the current Description?', '4wp-faq' ),
+					'done'     => __( 'Inserted into the form. Review, then Update.', '4wp-faq' ),
+					'confirm'  => __( 'Replace existing values in the form?', '4wp-faq' ),
 					'empty'    => __( 'Write or restore the prompt first.', '4wp-faq' ),
-					'error'    => __( 'Could not generate a description.', '4wp-faq' ),
+					'error'    => __( 'Could not generate category copy.', '4wp-faq' ),
 				],
 			]
 		);
@@ -162,6 +193,14 @@ class Term_Description {
 			);
 		}
 
+		if ( ! Settings::can_use_ai_field_markup() ) {
+			return new \WP_Error(
+				'forwp_faq_ai_disabled',
+				__( 'AI field markup is not enabled. Turn it on under Settings → 4WP FAQ.', '4wp-faq' ),
+				[ 'status' => 403 ]
+			);
+		}
+
 		return new \WP_REST_Response(
 			[
 				'prompt' => self::build_prompt( $term ),
@@ -174,7 +213,7 @@ class Term_Description {
 	 * @param \WP_REST_Request $request Request.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public static function generate_description( $request ) {
+	public static function generate_fields( $request ) {
 		$term = get_term( (int) $request['id'], Settings::get_taxonomy() );
 
 		if ( ! $term instanceof \WP_Term ) {
@@ -185,29 +224,85 @@ class Term_Description {
 			);
 		}
 
-		$text = \ForWP\AI\Client::generate(
+		if ( ! Settings::can_use_ai_field_markup() ) {
+			return new \WP_Error(
+				'forwp_faq_ai_disabled',
+				__( 'AI field markup is not enabled. Turn it on under Settings → 4WP FAQ.', '4wp-faq' ),
+				[ 'status' => 403 ]
+			);
+		}
+
+		$keys   = self::slot_ids();
+		$fields = \ForWP\AI\Client::generate_json(
 			(string) $request->get_param( 'prompt' ),
 			self::system_instruction(),
-			180
+			480,
+			$keys
 		);
 
-		if ( is_wp_error( $text ) ) {
-			return $text;
+		if ( is_wp_error( $fields ) ) {
+			return $fields;
+		}
+
+		if ( ! self::has_copy( $fields ) ) {
+			return new \WP_Error(
+				'forwp_ai_empty',
+				__( 'The model returned empty text.', '4wp-faq' ),
+				[ 'status' => 502 ]
+			);
 		}
 
 		return new \WP_REST_Response(
 			[
-				'text' => $text,
+				'fields' => $fields,
 			],
 			200
 		);
 	}
 
 	/**
+	 * @return string[]
+	 */
+	private static function slot_ids() {
+		$ids = [];
+		foreach ( self::slots() as $slot ) {
+			$ids[] = $slot['id'];
+		}
+
+		return $ids;
+	}
+
+	/**
+	 * @param array<string, mixed> $fields Mapped fields.
+	 * @return bool
+	 */
+	private static function has_copy( array $fields ) {
+		foreach ( $fields as $value ) {
+			if ( is_string( $value ) && '' !== trim( $value ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
 	 * @return string
 	 */
 	private static function system_instruction() {
-		return 'You write short FAQ category descriptions for a public website. Output plain text only: 1 or 2 sentences. No title, quotes, markdown, or list.';
+		return implode(
+			"\n",
+			[
+				'You write FAQ category copy for a public website.',
+				'Output JSON only. No markdown, no extra keys.',
+				'Schema: {"description":"","display_title":"","seo_title":"","seo_description":""}',
+				'description: 1 or 2 sentences, plain text.',
+				'display_title: short on-page heading. Not a slogan dump.',
+				'seo_title: document title, under 60 characters, no site name.',
+				'seo_description: meta description, under 160 characters.',
+				'Use the language from the prompt. Do not invent facts beyond the category name and questions.',
+			]
+		);
 	}
 
 	/**
@@ -218,9 +313,10 @@ class Term_Description {
 		$language  = self::language_label( $term->term_id );
 		$questions = self::question_titles( (int) $term->term_id );
 		$site      = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
+		$current   = self::current_values( $term );
 
 		$lines   = [];
-		$lines[] = 'Write the Description field for this FAQ category.';
+		$lines[] = 'Write copy for this FAQ category. Fill every field in the JSON schema.';
 		$lines[] = 'Site: ' . $site;
 		$lines[] = 'Language: ' . $language;
 		$lines[] = 'Category name: ' . $term->name;
@@ -232,9 +328,35 @@ class Term_Description {
 			}
 		}
 
-		$lines[] = 'Describe what this category covers. Do not invent facts beyond the name and questions.';
+		$filled = [];
+		foreach ( $current as $key => $value ) {
+			if ( '' !== $value ) {
+				$filled[] = $key . ': ' . $value;
+			}
+		}
+		if ( ! empty( $filled ) ) {
+			$lines[] = 'Current values (revise if useful, do not copy blindly):';
+			foreach ( $filled as $line ) {
+				$lines[] = '- ' . $line;
+			}
+		}
+
+		$lines[] = 'Do not invent facts beyond the name and questions.';
 
 		return implode( "\n", $lines );
+	}
+
+	/**
+	 * @param \WP_Term $term Term.
+	 * @return array<string, string>
+	 */
+	private static function current_values( $term ) {
+		return [
+			'description'     => trim( wp_strip_all_tags( (string) $term->description ) ),
+			'display_title'   => trim( (string) get_term_meta( $term->term_id, Faq_Terms::META_DISPLAY_TITLE, true ) ),
+			'seo_title'       => trim( (string) get_term_meta( $term->term_id, Faq_Terms::META_SEO_TITLE, true ) ),
+			'seo_description' => trim( (string) get_term_meta( $term->term_id, Faq_Terms::META_SEO_DESC, true ) ),
+		];
 	}
 
 	/**
@@ -257,6 +379,7 @@ class Term_Description {
 			'es' => 'Spanish',
 			'de' => 'German',
 			'ru' => 'Russian',
+			'uk' => 'Ukrainian',
 		];
 
 		return isset( $map[ $slug ] ) ? $map[ $slug ] : $slug;

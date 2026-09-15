@@ -48,6 +48,10 @@ class Admin_Rest {
 							'type'     => 'boolean',
 							'required' => false,
 						],
+						'ai_field_markup'      => [
+							'type'     => 'boolean',
+							'required' => false,
+						],
 					],
 				],
 			]
@@ -109,6 +113,9 @@ class Admin_Rest {
 				'output_json_ld'         => Settings::is_output_json_ld_enabled(),
 				'preview_per_category'   => Settings::get_preview_per_category(),
 				'seo_urls'               => Settings::is_seo_urls_enabled(),
+				'ai_available'           => class_exists( \ForWP\AI\Client::class ) && \ForWP\AI\Client::is_available(),
+				'ai_field_markup'        => Settings::is_ai_field_markup_enabled(),
+				'ai_connectors_url'      => admin_url( 'options-connectors.php' ),
 				'setup_complete' => Settings::is_setup_complete(),
 				'setup_skipped'  => Settings::is_setup_skipped(),
 				'setup_url'      => Setup_Wizard::get_page_url(),
@@ -132,6 +139,10 @@ class Admin_Rest {
 
 		if ( $request->has_param( 'seo_urls' ) ) {
 			Settings::set_seo_urls( (bool) $request->get_param( 'seo_urls' ) );
+		}
+
+		if ( $request->has_param( 'ai_field_markup' ) ) {
+			Settings::set_ai_field_markup( (bool) $request->get_param( 'ai_field_markup' ) );
 		}
 
 		return self::get_settings();

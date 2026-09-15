@@ -100,6 +100,7 @@ function SettingsTab() {
 	const [ loading, setLoading ] = useState( true );
 	const [ scanning, setScanning ] = useState( false );
 	const [ savingSeo, setSavingSeo ] = useState( false );
+	const [ savingAi, setSavingAi ] = useState( false );
 	const [ resetting, setResetting ] = useState( false );
 	const [ registry, setRegistry ] = useState( null );
 	const [ settings, setSettings ] = useState( null );
@@ -206,6 +207,37 @@ function SettingsTab() {
 			.finally( () => setSavingSeo( false ) );
 	};
 
+	const onToggleAiFieldMarkup = ( enabled ) => {
+		setSavingAi( true );
+		setError( '' );
+		apiFetch( {
+			path: SETTINGS_PATH,
+			method: 'POST',
+			data: { ai_field_markup: enabled },
+		} )
+			.then( ( response ) => {
+				setSettings( response );
+				setNotice(
+					enabled
+						? __(
+								'Predefined field markup enabled. Generate with AI can fill mapped category fields.',
+								'4wp-faq'
+						  )
+						: __(
+								'Predefined field markup disabled. The AI panel stays hidden on category screens.',
+								'4wp-faq'
+						  )
+				);
+			} )
+			.catch( ( e ) => {
+				setError(
+					e?.message ||
+						__( 'Could not save AI setting.', '4wp-faq' )
+				);
+			} )
+			.finally( () => setSavingAi( false ) );
+	};
+
 	const onPreviewPerCategory = ( value ) => {
 		const next = typeof value === 'number' ? value : 5;
 		setSavingSeo( true );
@@ -260,6 +292,8 @@ function SettingsTab() {
 	const jsonLdOn = settings?.output_json_ld === true;
 	const previewPer = settings?.preview_per_category || 5;
 	const seoUrlsOn = settings?.seo_urls === true;
+	const aiAvailable = settings?.ai_available === true;
+	const aiFieldMarkupOn = settings?.ai_field_markup === true;
 
 	return (
 		<div className="forwp-faq-settings-layout">
@@ -374,6 +408,89 @@ function SettingsTab() {
 					) : null }
 				</CardBody>
 			</Card>
+
+			{ aiAvailable ? (
+				<Card className="forwp-faq-actions-card">
+					<CardHeader>
+						<h2>{ __( 'AI', '4wp-faq' ) }</h2>
+					</CardHeader>
+					<CardBody>
+						<p>
+							{ __(
+								'Uses WordPress Connectors. One prompt fills mapped fields on FAQ category edit. Apply writes into the form; Update still saves.',
+								'4wp-faq'
+							) }
+						</p>
+						<ToggleControl
+							label={ __(
+								'Allow predefined field markup',
+								'4wp-faq'
+							) }
+							help={ __(
+								'On: show Generate with AI on category screens. Off: keep the panel hidden.',
+								'4wp-faq'
+							) }
+							checked={ aiFieldMarkupOn }
+							disabled={ savingAi }
+							onChange={ onToggleAiFieldMarkup }
+						/>
+						<ul className="forwp-faq-doc-list">
+							<li>
+								<strong>
+									{ __( 'Description', '4wp-faq' ) }
+								</strong>
+								{ ' — ' }
+								{ __(
+									'Core category Description.',
+									'4wp-faq'
+								) }
+							</li>
+							<li>
+								<strong>
+									{ __( 'Display title', '4wp-faq' ) }
+								</strong>
+								{ ' — ' }
+								{ __(
+									'On-page title on pretty category URLs.',
+									'4wp-faq'
+								) }
+							</li>
+							<li>
+								<strong>
+									{ __( 'SEO title', '4wp-faq' ) }
+								</strong>
+								{ ' — ' }
+								{ __(
+									'Document title. No site name suffix.',
+									'4wp-faq'
+								) }
+							</li>
+							<li>
+								<strong>
+									{ __( 'SEO description', '4wp-faq' ) }
+								</strong>
+								{ ' — ' }
+								{ __(
+									'Meta description on category URLs.',
+									'4wp-faq'
+								) }
+							</li>
+						</ul>
+						{ settings?.ai_connectors_url ? (
+							<p className="forwp-faq-actions-card__meta">
+								<ExternalLink
+									href={ settings.ai_connectors_url }
+								>
+									{ __(
+										'WordPress Connectors',
+										'4wp-faq'
+									) }
+								</ExternalLink>
+							</p>
+						) : null }
+					</CardBody>
+				</Card>
+			) : null }
 
 			<Card className="forwp-faq-actions-card">
 				<CardHeader>
