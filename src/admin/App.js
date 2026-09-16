@@ -409,88 +409,114 @@ function SettingsTab() {
 				</CardBody>
 			</Card>
 
-			{ aiAvailable ? (
-				<Card className="forwp-faq-actions-card">
-					<CardHeader>
-						<h2>{ __( 'AI', '4wp-faq' ) }</h2>
-					</CardHeader>
-					<CardBody>
-						<p>
+			<Card className="forwp-faq-actions-card">
+				<CardHeader>
+					<h2>{ __( 'AI', '4wp-faq' ) }</h2>
+				</CardHeader>
+				<CardBody>
+					<p>
+						{ __(
+							'Uses WordPress Connectors. One prompt fills mapped fields on FAQ category edit. Apply writes into the form; Update still saves.',
+							'4wp-faq'
+						) }
+					</p>
+					{ ! aiAvailable ? (
+						<Notice status="warning" isDismissible={ false }>
 							{ __(
-								'Uses WordPress Connectors. One prompt fills mapped fields on FAQ category edit. Apply writes into the form; Update still saves.',
+								'WordPress Connectors are not available yet. Configure a text provider, then enable the option below.',
 								'4wp-faq'
 							) }
-						</p>
-						<ToggleControl
-							label={ __(
-								'Allow predefined field markup',
-								'4wp-faq'
-							) }
-							help={ __(
-								'On: show Generate with AI on category screens. Off: keep the panel hidden.',
-								'4wp-faq'
-							) }
-							checked={ aiFieldMarkupOn }
-							disabled={ savingAi }
-							onChange={ onToggleAiFieldMarkup }
-						/>
-						<ul className="forwp-faq-doc-list">
-							<li>
-								<strong>
-									{ __( 'Description', '4wp-faq' ) }
-								</strong>
-								{ ' — ' }
-								{ __(
-									'Core category Description.',
-									'4wp-faq'
-								) }
-							</li>
-							<li>
-								<strong>
-									{ __( 'Display title', '4wp-faq' ) }
-								</strong>
-								{ ' — ' }
-								{ __(
-									'On-page title on pretty category URLs.',
-									'4wp-faq'
-								) }
-							</li>
-							<li>
-								<strong>
-									{ __( 'SEO title', '4wp-faq' ) }
-								</strong>
-								{ ' — ' }
-								{ __(
-									'Document title. No site name suffix.',
-									'4wp-faq'
-								) }
-							</li>
-							<li>
-								<strong>
-									{ __( 'SEO description', '4wp-faq' ) }
-								</strong>
-								{ ' — ' }
-								{ __(
-									'Meta description on category URLs.',
-									'4wp-faq'
-								) }
-							</li>
-						</ul>
-						{ settings?.ai_connectors_url ? (
-							<p className="forwp-faq-actions-card__meta">
-								<ExternalLink
-									href={ settings.ai_connectors_url }
-								>
-									{ __(
-										'WordPress Connectors',
+							{ settings?.ai_connectors_url ? (
+								<>
+									{ ' ' }
+									<ExternalLink
+										href={ settings.ai_connectors_url }
+									>
+										{ __(
+											'Open Connectors',
+											'4wp-faq'
+										) }
+									</ExternalLink>
+								</>
+							) : null }
+						</Notice>
+					) : null }
+					<ToggleControl
+						label={ __(
+							'Allow predefined field markup',
+							'4wp-faq'
+						) }
+						help={
+							aiAvailable
+								? __(
+										'On: show Generate with AI on category screens. Off: keep the panel hidden.',
 										'4wp-faq'
-									) }
-								</ExternalLink>
-							</p>
-						) : null }
-					</CardBody>
-				</Card>
-			) : null }
+								  )
+								: __(
+										'Turn on after WordPress Connectors support text generation.',
+										'4wp-faq'
+								  )
+						}
+						checked={ aiAvailable && aiFieldMarkupOn }
+						disabled={ savingAi || ! aiAvailable }
+						onChange={ onToggleAiFieldMarkup }
+					/>
+					<ul className="forwp-faq-doc-list">
+						<li>
+							<strong>
+								{ __( 'Description', '4wp-faq' ) }
+							</strong>
+							{ ' — ' }
+							{ __(
+								'Core category Description.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>
+								{ __( 'Display title', '4wp-faq' ) }
+							</strong>
+							{ ' — ' }
+							{ __(
+								'On-page title on pretty category URLs.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>
+								{ __( 'SEO title', '4wp-faq' ) }
+							</strong>
+							{ ' — ' }
+							{ __(
+								'Document title. No site name suffix.',
+								'4wp-faq'
+							) }
+						</li>
+						<li>
+							<strong>
+								{ __( 'SEO description', '4wp-faq' ) }
+							</strong>
+							{ ' — ' }
+							{ __(
+								'Meta description on category URLs.',
+								'4wp-faq'
+							) }
+						</li>
+					</ul>
+					{ settings?.ai_connectors_url ? (
+						<p className="forwp-faq-actions-card__meta">
+							<ExternalLink
+								href={ settings.ai_connectors_url }
+							>
+								{ __(
+									'WordPress Connectors',
+									'4wp-faq'
+								) }
+							</ExternalLink>
+						</p>
+					) : null }
+				</CardBody>
+			</Card>
 
 			<Card className="forwp-faq-actions-card">
 				<CardHeader>

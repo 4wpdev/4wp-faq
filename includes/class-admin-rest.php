@@ -142,7 +142,17 @@ class Admin_Rest {
 		}
 
 		if ( $request->has_param( 'ai_field_markup' ) ) {
-			Settings::set_ai_field_markup( (bool) $request->get_param( 'ai_field_markup' ) );
+			$enable_ai = (bool) $request->get_param( 'ai_field_markup' );
+
+			if ( $enable_ai && ! ( class_exists( \ForWP\AI\Client::class ) && \ForWP\AI\Client::is_available() ) ) {
+				return new \WP_Error(
+					'forwp_faq_ai_connectors_required',
+					__( 'Enable WordPress Connectors before turning on AI field markup.', '4wp-faq' ),
+					[ 'status' => 400 ]
+				);
+			}
+
+			Settings::set_ai_field_markup( $enable_ai );
 		}
 
 		return self::get_settings();
