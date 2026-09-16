@@ -58,11 +58,11 @@ Registry posts are created by the scan. Do not create them by hand under “Add 
 * **Polylang** — categories follow the language of the page that owns the FAQ block
 * Setup wizard for registry post type and taxonomy slugs
 * **Convert to FAQ** toolbar and **Transform to → 4WP FAQ** (Accordion, Details, List, heading + paragraph — one or many); default Accordion template on insert
-* **AI Assistant** — WordPress AI Client / Connectors; Generate with AI on FAQ category edit (description + titles + meta). Off until a connector is available and **Allow predefined field markup** is on
+* **AI Assistant** — WordPress AI Client / Connectors; Generate with AI on FAQ category edit (description + titles + meta). Settings → AI is always visible; markup stays off until a connector is available and **Allow predefined field markup** is on
 
 = AI Assistant =
 
-Generation uses the **WordPress AI Client**. Configure a text-generation connector under **Settings → Connectors**. When `wp_supports_ai()` reports a working connector, **FAQ → Settings** shows an **AI** card.
+Generation uses the **WordPress AI Client**. Configure a text-generation connector under **Settings → Connectors**. **FAQ → Settings** always shows an **AI** card; **Allow predefined field markup** stays disabled until a connector is available.
 
 1. Complete registry setup so FAQ categories exist.
 2. Open **Settings → Connectors** and finish a connector for text generation.
@@ -203,7 +203,7 @@ Yes. **FAQ → Dashboard** is available to users who can edit posts. **Rescan** 
 
 = How does the AI Assistant work? =
 
-It uses the standard **WordPress AI Client**, not a separate 4WP AI plugin. Configure a text-generation connector under **Settings → Connectors**. Then enable **Allow predefined field markup** under **FAQ → Settings → AI**. On a FAQ category edit screen, **Generate with AI** proposes Description, Display title, SEO title, and SEO description. Apply writes into the form; **Update** saves. If no connector is available, the AI card and Generate panel stay hidden.
+It uses the standard **WordPress AI Client**, not a separate 4WP AI plugin. Configure a text-generation connector under **Settings → Connectors**. The **AI** card is always visible under **FAQ → Settings**; you cannot enable **Allow predefined field markup** until a connector is ready. On a FAQ category edit screen, **Generate with AI** proposes Description, Display title, SEO title, and SEO description. Apply writes into the form; **Update** saves. Without a connector, Generate stays unavailable on category screens.
 
 == Screenshots ==
 
@@ -223,7 +223,7 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 
 = 2.5.0 =
 * **AI Assistant:** generate FAQ category Description, Display title, SEO title, and SEO description via the standard WordPress AI Client (Settings → Connectors).
-* Settings: opt-in **Allow predefined field markup**. Generate panel on category edit; Apply writes into the form, Update still saves.
+* Settings → AI card is always visible; **Allow predefined field markup** stays disabled until Connectors support text generation.
 * Docs: WordPress.org readme documents Connectors, FAQ, and External services.
 
 = 2.4.0 =
@@ -280,7 +280,7 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 == Upgrade Notice ==
 
 = 2.5.0 =
-Optional AI category copy via WordPress Connectors. Configure Settings → Connectors, then FAQ → Settings → AI, then Generate with AI on a category.
+Optional AI category copy via WordPress Connectors. FAQ → Settings → AI is always visible; enable markup after Connectors are ready, then Generate with AI on a category.
 
 = 2.4.0 =
 Category nav collapses nested terms by default. Pretty category URLs fill core Title / Query Title / Term Name and Excerpt / Term Description, use a category canonical and SEO image (hub image if empty), and skip the duplicate list H2 when the page title already shows the category.
