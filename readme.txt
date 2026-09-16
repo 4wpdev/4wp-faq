@@ -4,11 +4,11 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.4.0
+Stable tag: 2.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-FAQPage schema for core Accordion, optional registry hub, category SEO, and drag-and-drop order—without duplicating content.
+FAQPage schema for core Accordion, optional registry hub, category SEO, and AI via WordPress Connectors.
 
 == Description ==
 
@@ -18,6 +18,7 @@ FAQPage schema for core Accordion, optional registry hub, category SEO, and drag
 * An optional **FAQ registry** that aggregates questions across the site after a scan
 * **Hub pages** with List + Categories blocks, pretty category URLs, category SEO titles, collapsible subcategory nav, and drag-and-drop category order (admin + front end)
 * **Drag-and-drop FAQ category order** on **FAQ → Categories** — same order in admin lists and on the front end (List / Categories hub)
+* Optional **AI category copy** through the standard **WordPress AI Client** (Settings → Connectors) — description, display title, SEO title, and SEO description. No custom vendor SDK.
 
 A plugin by [4wp.dev](https://4wp.dev/). **4WP** is our project brand; this plugin is not affiliated with, endorsed, or sponsored by WordPress.
 
@@ -30,6 +31,7 @@ Source: [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)
 3. Put the **question** in the Accordion Item heading and the **answer** in the panel.
 4. Open **FAQ → Settings** and enable **FAQPage JSON-LD** if you want structured data on the front end.
 5. Optional: complete registry setup → **Rescan** (Dashboard or Settings) → place **4WP FAQ List** and **4WP FAQ Categories** on a hub page or template.
+6. Optional: configure **Settings → Connectors**, then **FAQ → Settings → AI** to allow field markup. On **FAQ → Categories**, edit a term and **Generate with AI**. Apply writes into the form; **Update** still saves.
 
 Registry posts are created by the scan. Do not create them by hand under “Add New”.
 
@@ -56,6 +58,19 @@ Registry posts are created by the scan. Do not create them by hand under “Add 
 * **Polylang** — categories follow the language of the page that owns the FAQ block
 * Setup wizard for registry post type and taxonomy slugs
 * **Convert to FAQ** toolbar and **Transform to → 4WP FAQ** (Accordion, Details, List, heading + paragraph — one or many); default Accordion template on insert
+* **AI Assistant** — WordPress AI Client / Connectors; Generate with AI on FAQ category edit (description + titles + meta). Off until a connector is available and **Allow predefined field markup** is on
+
+= AI Assistant =
+
+Generation uses the **WordPress AI Client**. Configure a text-generation connector under **Settings → Connectors**. When `wp_supports_ai()` reports a working connector, **FAQ → Settings** shows an **AI** card.
+
+1. Complete registry setup so FAQ categories exist.
+2. Open **Settings → Connectors** and finish a connector for text generation.
+3. Under **FAQ → Settings → AI**, turn on **Allow predefined field markup**.
+4. Edit a category on **FAQ → Categories**. **Generate with AI** fills **Description**, **Display title**, **SEO title**, and **SEO description** from the category name and questions in that term.
+5. Review, **Apply** (or Apply all), then **Update**. Nothing is saved until you update the term.
+
+The plugin does not ship API keys and does not call a model until a connector is configured. Which remote service receives the prompt depends on the connector the administrator selected.
 
 = Development =
 
@@ -71,8 +86,9 @@ From a clone:
 
 1. Upload to `/wp-content/plugins/4wp-faq/` or install from **Plugins → Add New**.
 2. Activate **4WP FAQ**.
-3. Add or convert Accordion blocks, then open **FAQ → Settings** for JSON-LD and registry options.
+3. Add or convert Accordion blocks, then open **FAQ → Settings** for JSON-LD, registry, and optional AI options.
 4. After registry setup + Rescan, add **4WP FAQ List** and **4WP FAQ Categories** on a page or template.
+5. Optional: configure **Settings → Connectors**, then enable **Allow predefined field markup** under **FAQ → Settings → AI**.
 
 == Frequently Asked Questions ==
 
@@ -185,13 +201,30 @@ Yes for registry categories during scan: terms follow the language of the page t
 
 Yes. **FAQ → Dashboard** is available to users who can edit posts. **Rescan** and **Settings** require manage options (administrators).
 
+= How does the AI Assistant work? =
+
+It uses the standard **WordPress AI Client**, not a separate 4WP AI plugin. Configure a text-generation connector under **Settings → Connectors**. Then enable **Allow predefined field markup** under **FAQ → Settings → AI**. On a FAQ category edit screen, **Generate with AI** proposes Description, Display title, SEO title, and SEO description. Apply writes into the form; **Update** saves. If no connector is available, the AI card and Generate panel stay hidden.
+
 == Screenshots ==
 
 1. 4WP FAQ block wrapping core Accordion in the editor
 2. Settings — rescan, JSON-LD, preview count, pretty category URLs, and how category titles are built
 3. FAQ hub — List + Categories (and Count) in the Site Editor
 
+== External services ==
+
+This plugin optionally sends prompts through the **WordPress AI Client** when an administrator configures a connector under **Settings → Connectors** and runs **Generate with AI** on a FAQ category.
+
+**WordPress AI Client / Connectors** (optional)
+
+The plugin sends a prompt (site name, category name, question titles in that category, and current field values) through `wp_ai_client_prompt()`. The WordPress AI Client routes that prompt to the connector the administrator selected. This plugin does not call model vendors directly; which remote service receives the prompt depends on that connector. No visitor or front-end user data is sent. Nothing is generated until a connector is configured and **Allow predefined field markup** is on.
+
 == Changelog ==
+
+= 2.5.0 =
+* **AI Assistant:** generate FAQ category Description, Display title, SEO title, and SEO description via the standard WordPress AI Client (Settings → Connectors).
+* Settings: opt-in **Allow predefined field markup**. Generate panel on category edit; Apply writes into the form, Update still saves.
+* Docs: WordPress.org readme documents Connectors, FAQ, and External services.
 
 = 2.4.0 =
 * **FAQ Categories:** collapse nested terms by default (block inspector toggle). Visitors can expand/collapse parents; the choice is remembered in the browser. The branch for the current category stays open.
@@ -245,6 +278,9 @@ Yes. **FAQ → Dashboard** is available to users who can edit posts. **Rescan** 
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.5.0 =
+Optional AI category copy via WordPress Connectors. Configure Settings → Connectors, then FAQ → Settings → AI, then Generate with AI on a category.
 
 = 2.4.0 =
 Category nav collapses nested terms by default. Pretty category URLs fill core Title / Query Title / Term Name and Excerpt / Term Description, use a category canonical and SEO image (hub image if empty), and skip the duplicate list H2 when the page title already shows the category.

@@ -1,10 +1,10 @@
 # 4WP FAQ
 
 [![License: GPL v2](https://img.shields.io/badge/License-GPL%20v2-blue.svg?style=flat-square)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![WordPress 6.0+](https://img.shields.io/badge/WordPress-6.0%2B-blue.svg?style=flat-square)](https://wordpress.org/)
+[![WordPress 6.6+](https://img.shields.io/badge/WordPress-6.6%2B-blue.svg?style=flat-square)](https://wordpress.org/)
 [![PHP 7.4+](https://img.shields.io/badge/PHP-7.4%2B-777bb4.svg?style=flat-square)](https://www.php.net/)
 
-**Not another FAQ block.** A smart wrapper around core **Accordion** that adds FAQPage JSON-LD, an optional question registry, and usage stats—without changing your front-end design or duplicating content.
+**Not another FAQ block.** A smart wrapper around core **Accordion** that adds FAQPage JSON-LD, an optional question registry, and usage stats—without changing your front-end design or duplicating content. Optional **AI Assistant** fills FAQ category copy through the standard **WordPress AI Client / Connectors**.
 
 A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)** · Directory: [`readme.txt`](readme.txt)
 
@@ -14,8 +14,26 @@ A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq]
 2. Write one question per Accordion Item (heading = question, panel = answer).
 3. Open **FAQ → Settings** and turn on **FAQPage JSON-LD** when you want structured data for Google.
 4. Optional: finish the registry setup wizard, run **Rescan**, then build a hub with **4WP FAQ List** + **4WP FAQ Categories**.
+5. Optional: configure **Settings → Connectors**, enable **FAQ → Settings → AI**, then **Generate with AI** on a category.
 
 JSON-LD works **without** the registry. The registry is for browsing, reuse tracking, and hub pages.
+
+## Version 2.5.0
+
+- **AI Assistant** on FAQ category edit: Description, Display title, SEO title, SEO description via **Settings → Connectors** (`wp_ai_client_prompt` / `wp_supports_ai`)
+- Settings opt-in: **Allow predefined field markup**. Apply writes into the form; Update still saves.
+
+## AI Assistant (WordPress Connectors)
+
+Generation uses the **WordPress AI Client**. Configure a text-generation connector under **Settings → Connectors**. Until a connector is available, the Settings **AI** card and the Generate panel stay off.
+
+1. Finish registry setup so FAQ categories exist.
+2. Open **Settings → Connectors** and complete the connector for text generation.
+3. Under **FAQ → Settings → AI**, turn on **Allow predefined field markup**.
+4. Edit a term on **FAQ → Categories** and **Generate with AI**. The prompt uses the category name and questions in that term (registry titles).
+5. Review the four fields, Apply, then **Update**. Nothing is saved until you update the term.
+
+The plugin does not ship API keys or talk to a model until the site administrator has configured a connector.
 
 ## Features
 
@@ -30,6 +48,7 @@ JSON-LD works **without** the registry. The registry is for browsing, reuse trac
 - **Pretty category URLs** — `/current-page/term-slug/` when Settings + Categories block allow it
 - **Category SEO** — display title, SEO title (as-is when filled), SEO description
 - **Polylang** — categories follow the language of the page that owns the FAQ block
+- **AI Assistant** — WordPress AI Client connectors; generate category description and SEO fields (opt-in)
 
 Legacy **`core/details`** inside the wrapper is still supported for schema and scan.
 
@@ -41,7 +60,7 @@ Legacy **`core/details`** inside the wrapper is still supported for schema and s
 | **Add FAQ** | Editors+ | How-to (registry posts are created by scan, not by hand) |
 | **All FAQs** | Editors+ | Registry list table |
 | **Categories** | Editors+ | Hierarchy + **drag-and-drop order** (saved to `term_order`; used admin + front) |
-| **Settings** | Admins | Overview stats, Rescan, JSON-LD, pretty URLs, title rules, Documentation |
+| **Settings** | Admins | Overview stats, Rescan, JSON-LD, pretty URLs, optional **AI** (Connectors), title rules, Documentation |
 
 ## Block structure
 
@@ -106,8 +125,9 @@ npm install && npm run build
 
 ## Requirements
 
-- WordPress **6.0+** (Accordion blocks; tested up to **7.1**)
+- WordPress **6.6+** (Accordion blocks; tested up to **7.1**)
 - PHP **7.4+**
+- Optional: **WordPress AI Client** + a text-generation connector under **Settings → Connectors**
 
 ## Links
 
@@ -123,7 +143,7 @@ npm install && npm run build
 
 - **Namespace:** `ForWP\FAQ`
 - **Blocks:** `forwp/faq`, `forwp/faq-list`, `forwp/faq-card`, `forwp/faq-categories`, `forwp/faq-count` · **Text domain:** `4wp-faq`
-- **REST:** `forwp-faq/v1` (settings, registry scan, setup)
+- **REST:** `forwp-faq/v1` (settings, registry scan, setup, category AI prompt/generate)
 - **Build:** `npm run build` → `build/`
 
 ```bash
