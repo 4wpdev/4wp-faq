@@ -46,15 +46,6 @@ class Admin_Settings {
 
 			add_submenu_page(
 				$parent,
-				__( 'Add FAQ', '4wp-faq' ),
-				__( 'Add FAQ', '4wp-faq' ),
-				'edit_posts',
-				self::ADD_GUIDE_SLUG,
-				[ __CLASS__, 'render_add_guide' ]
-			);
-
-			add_submenu_page(
-				$parent,
 				__( '4WP FAQ Settings', '4wp-faq' ),
 				__( 'Settings', '4wp-faq' ),
 				'manage_options',
@@ -99,7 +90,7 @@ class Admin_Settings {
 			return self::get_page_url();
 		}
 
-		return admin_url( 'edit.php?post_type=' . rawurlencode( Settings::get_post_type() ) . '&page=' . self::ADD_GUIDE_SLUG );
+		return admin_url( 'post-new.php?post_type=' . rawurlencode( Settings::get_post_type() ) );
 	}
 
 	/**

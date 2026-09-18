@@ -16,7 +16,14 @@ A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq]
 4. Optional: finish the registry setup wizard, run **Rescan**, then build a hub with **4WP FAQ List** + **4WP FAQ Categories**.
 5. Optional: configure **Settings → Connectors**, enable **FAQ → Settings → AI**, then **Generate with AI** on a category.
 
-JSON-LD works **without** the registry. The registry is for browsing, reuse tracking, and hub pages.
+JSON-LD works **without** the registry. The registry is a helper: scan unique questions, edit one record to push Q/A onto every **Used In** page, or **Add FAQ** onto category pages / one page. Accordion items on the site stay the source of truth.
+
+## Version 2.6.0
+
+- **Edit** a registry FAQ (title + answer) → **Update** writes that item onto every **Used In** page. A renamed question is found via the previous title.
+- **Add FAQ:** categories → every matching `forwp/faq` block; optional **one page**; neither → dropped on scan.
+- New answers reuse the sibling accordion-item wrapper; wrapped HTML is saved back on the registry record.
+- Rescan / reinstall rebuilds the CPT from page content.
 
 ## Version 2.5.0
 
@@ -40,7 +47,7 @@ The plugin does not ship API keys or talk to a model until the site administrato
 - **`forwp/faq` wrapper** — keeps Accordion layout and theme styles
 - **FAQPage JSON-LD** — site-wide toggle in Settings; per-block override; output in `<head>`
 - **Convert to FAQ** — toolbar on Accordion / Accordion Item / Details / List; **Transform to → 4WP FAQ** for one or many selected items
-- **Optional registry** — CPT + taxonomy (setup wizard), content scan, “Used in” sources
+- **Optional registry** — CPT + taxonomy, scan, **Used In**, edit-to-push, **Add FAQ** onto category pages or one page
 - **Admin Dashboard** — classic wp-admin widgets: status, categories (tree), reused, uncategorized; Rescan from Status
 - **Drag-and-drop category order** — on **FAQ → FAQ Categories**; same order in admin lists, Dashboard, and front-end List / Categories
 - **FSE hub blocks** — List, Categories, Count, Card
@@ -57,7 +64,7 @@ Legacy **`core/details`** inside the wrapper is still supported for schema and s
 | Screen | Who | Purpose |
 |--------|-----|---------|
 | **Dashboard** | Editors+ | Status metrics, Rescan, category tree, reused / uncategorized |
-| **Add FAQ** | Editors+ | How-to (registry posts are created by scan, not by hand) |
+| **Add FAQ** | Editors+ | New question + answer; place via FAQ categories and/or one page |
 | **All FAQs** | Editors+ | Registry list table |
 | **Categories** | Editors+ | Hierarchy + **drag-and-drop order** (saved to `term_order`; used admin + front) |
 | **Settings** | Admins | Overview stats, Rescan, JSON-LD, pretty URLs, optional **AI** (Connectors), title rules, Documentation |

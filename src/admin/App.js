@@ -642,7 +642,7 @@ function DocumentationTab() {
 				</p>
 				<p>
 					{ __(
-						'Your questions and answers stay in the page content (Accordion items). The registry is a read-only aggregate for browsing and reuse tracking—not a second place to edit FAQ text.',
+						'Your questions and answers live in page content (Accordion items). That is the source of truth. The registry is a scan of unique questions. Edit a registry record and Update: the plugin writes the new Q/A onto every Used In page. Add FAQ to place a new item. Delete the registry or reinstall: a scan rebuilds it from the site.',
 						'4wp-faq'
 					) }
 				</p>
@@ -833,7 +833,7 @@ forwp/faq-count              ← optional count` }</code>
 				</p>
 				<p>
 					{ __(
-						'A background scan walks published content, finds all forwp/faq blocks, and creates or updates registry posts—one per unique question—with metadata:',
+						'A scan walks content, finds forwp/faq blocks, and creates or updates registry posts—one per unique question—with usage, categories, and answer snapshots.',
 						'4wp-faq'
 					) }
 				</p>
@@ -846,7 +846,25 @@ forwp/faq-count              ← optional count` }</code>
 				</ul>
 				<p>
 					{ __(
-						'Run Rescan registry on the Settings tab after you add or change FAQ content. Scans also schedule automatically when relevant posts are saved.',
+						'Edit a registry FAQ (title + answer) and Update. The plugin finds that accordion item on every Used In page. If you change the question, it matches the previous title.',
+						'4wp-faq'
+					) }
+				</p>
+				<p>
+					{ __(
+						'Add FAQ: write the question and answer. FAQ categories in the sidebar append the item to every forwp/faq block with those terms. One page (optional) writes only to that post/page. Neither: the row stays in the list until a scan, then it is dropped because it is not on the site.',
+						'4wp-faq'
+					) }
+				</p>
+				<p>
+					{ __(
+						'A new answer reuses the wrapper of a sibling accordion item on that page (same heading/panel markup) and fills in your text. After save, that wrapped HTML is stored on the registry record.',
+						'4wp-faq'
+					) }
+				</p>
+				<p>
+					{ __(
+						'Run Rescan after you change FAQ content on pages. Registry Update also writes back to those pages, then a scan is scheduled. Scans also run when relevant posts are saved.',
 						'4wp-faq'
 					) }
 				</p>
@@ -874,7 +892,7 @@ forwp/faq-count              ← optional count` }</code>
 					</li>
 					<li>
 						{ __(
-							'Optional: complete FAQ registry setup and run a scan.',
+							'Optional: complete FAQ registry setup and run a scan. Then you can edit a registry FAQ (pushes to Used In pages) or Add FAQ onto category pages / one page.',
 							'4wp-faq'
 						) }
 					</li>

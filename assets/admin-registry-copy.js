@@ -23,4 +23,21 @@
 			}
 		}
 	} );
+
+	document.addEventListener(
+		'submit',
+		function ( event ) {
+			if ( ! event.target || 'post' !== event.target.id ) {
+				return;
+			}
+			if ( typeof window.tinymce === 'undefined' ) {
+				return;
+			}
+			var editor = window.tinymce.get( 'forwp_faq_answer_html' );
+			if ( editor ) {
+				editor.save();
+			}
+		},
+		true
+	);
 }() );

@@ -20,6 +20,7 @@ class Plugin {
 		Setup_Wizard::init();
 		Setup_Rest::init();
 		Admin_Rest::init();
+		Registry_Push::init();
 		Editor_Rest::init();
 		Dashboard_Setup::init();
 		Polylang::init();
@@ -36,7 +37,6 @@ class Plugin {
 		if ( is_admin() ) {
 			Admin_Settings::init();
 			add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_registry_admin_assets' ] );
-			add_action( 'load-post-new.php', [ __CLASS__, 'redirect_manual_add' ] );
 			add_action( 'admin_post_forwp_faq_scan', [ __CLASS__, 'handle_manual_scan' ] );
 			add_action( 'admin_notices', [ __CLASS__, 'render_setup_success_notice' ] );
 		}
@@ -88,7 +88,7 @@ class Plugin {
 		}
 
 		$post_type = Settings::get_post_type();
-		if ( 'post.php' !== $hook_suffix ) {
+		if ( 'post.php' !== $hook_suffix && 'post-new.php' !== $hook_suffix ) {
 			return;
 		}
 
@@ -104,24 +104,6 @@ class Plugin {
 			FORWP_FAQ_VERSION,
 			true
 		);
-	}
-
-	/**
-	 * Registry posts come from scan — do not use the native Add New editor.
-	 */
-	public static function redirect_manual_add() {
-		if ( ! Settings::is_setup_complete() ) {
-			return;
-		}
-
-		$post_type = Settings::get_post_type();
-		$requested = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( $post_type !== $requested ) {
-			return;
-		}
-
-		wp_safe_redirect( Admin_Settings::get_add_guide_url() );
-		exit;
 	}
 
 	/**
@@ -231,9 +213,6 @@ class Plugin {
 				'supports'        => [ 'title' ],
 				'taxonomies'      => [ Settings::get_taxonomy() ],
 				'map_meta_cap'    => true,
-				'capabilities'    => [
-					'create_posts' => 'do_not_allow',
-				],
 			]
 		);
 	}
@@ -1044,7 +1023,7 @@ class Plugin {
 	 * @param string $block_name Block name.
 	 * @return bool
 	 */
-	private static function is_faq_item_block( $block_name ) {
+	public static function is_faq_item_block( $block_name ) {
 		if ( ! is_string( $block_name ) || '' === $block_name ) {
 			return false;
 		}
@@ -1162,7 +1141,7 @@ class Plugin {
 	 * @param string $block_name Block name.
 	 * @return bool
 	 */
-	private static function is_details_block( $block_name ) {
+	public static function is_details_block( $block_name ) {
 		if ( ! is_string( $block_name ) || '' === $block_name ) {
 			return false;
 		}
@@ -1203,7 +1182,7 @@ class Plugin {
 	 * @param array $block Block data.
 	 * @return array{question:string,answer:string,answer_html:string}
 	 */
-	private static function extract_item_texts( $block ) {
+	public static function extract_item_texts( $block ) {
 		$block_name  = $block['blockName'] ?? '';
 		$is_details  = self::is_details_block( $block_name );
 		$question    = self::extract_question( $block );
@@ -1602,69 +1581,76 @@ class Plugin {
 		$answers_html = get_post_meta( $post->ID, 'answers_html', true );
 		$answers_html = is_array( $answers_html ) ? $answers_html : [];
 		$original_question = get_post_meta( $post->ID, 'original_question', true );
-		$source_titles = get_post_meta( $post->ID, 'source_titles', true );
-		$source_titles = is_array( $source_titles ) ? $source_titles : [];
+		$editable_html = isset( $answers_html[0] ) ? (string) $answers_html[0] : '';
+		wp_nonce_field( Registry_Push::NONCE_ACTION, Registry_Push::NONCE_FIELD );
 		?>
 		<div class="forwp-faq-meta">
-			<p><strong><?php esc_html_e( 'FAQ title (original):', '4wp-faq' ); ?></strong></p>
-			<?php if ( $original_question ) : ?>
-				<p><?php echo esc_html( $original_question ); ?></p>
-			<?php else : ?>
-				<p>&mdash;</p>
+			<p>
+				<?php esc_html_e( 'Already on the site: Update writes this Q/A onto every Used In page. New: categories and/or one page below. Neither: scan will drop this row.', '4wp-faq' ); ?>
+			</p>
+			<?php if ( $original_question && $original_question !== $post->post_title ) : ?>
+				<p>
+					<strong><?php esc_html_e( 'On pages until last push/scan:', '4wp-faq' ); ?></strong>
+					<?php echo esc_html( (string) $original_question ); ?>
+				</p>
 			<?php endif; ?>
 
-			<p><strong><?php esc_html_e( 'Original titles:', '4wp-faq' ); ?></strong></p>
-			<?php if ( empty( $source_titles ) ) : ?>
-				<p>&mdash;</p>
-			<?php else : ?>
-				<ul>
-					<?php foreach ( $source_titles as $source_title ) : ?>
-						<li><?php echo esc_html( $source_title ); ?></li>
-					<?php endforeach; ?>
-				</ul>
-			<?php endif; ?>
+			<p><strong><?php esc_html_e( 'Answer', '4wp-faq' ); ?></strong></p>
+			<?php
+			wp_editor(
+				$editable_html,
+				'forwp_faq_answer_html',
+				[
+					'textarea_name' => 'forwp_faq_answer_html',
+					'textarea_rows' => 10,
+					'media_buttons' => false,
+					'tinymce'       => true,
+					'quicktags'     => true,
+				]
+			);
+			?>
 
-			<p><strong><?php esc_html_e( 'Answers (text):', '4wp-faq' ); ?></strong></p>
-			<?php if ( empty( $answers ) ) : ?>
-				<p>&mdash;</p>
-			<?php else : ?>
-				<ol>
-					<?php foreach ( $answers as $answer ) : ?>
-						<li><?php echo esc_html( $answer ); ?></li>
-					<?php endforeach; ?>
-				</ol>
-			<?php endif; ?>
-
-			<p><strong><?php esc_html_e( 'Answers (HTML):', '4wp-faq' ); ?></strong></p>
-			<?php if ( empty( $answers_html ) ) : ?>
-				<p>&mdash;</p>
-			<?php else : ?>
-				<ol>
-					<?php foreach ( $answers_html as $answer_html ) : ?>
-						<li>
-							<textarea class="widefat" rows="4" readonly><?php echo esc_textarea( $answer_html ); ?></textarea>
-						</li>
-					<?php endforeach; ?>
-				</ol>
-			<?php endif; ?>
-
-			<p><strong><?php esc_html_e( 'Answers (rendered):', '4wp-faq' ); ?></strong></p>
-			<?php if ( empty( $answers_html ) ) : ?>
-				<p>&mdash;</p>
-			<?php else : ?>
-				<?php foreach ( $answers_html as $answer_html ) : ?>
-					<div class="forwp-faq-rendered" style="margin: 8px 0 16px; padding: 12px; border: 1px solid #dcdcde; background: #fff;">
+			<?php
+			$used_in_posts = get_post_meta( $post->ID, 'used_in_posts', true );
+			$used_in_posts = is_array( $used_in_posts ) ? array_filter( array_map( 'intval', $used_in_posts ) ) : [];
+			if ( empty( $used_in_posts ) ) :
+				$faq_pages = Registry_Push::list_faq_pages();
+				$selected  = isset( $_POST['forwp_faq_add_to_post'] ) ? (int) $_POST['forwp_faq_add_to_post'] : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+				?>
+			<p><strong><?php esc_html_e( 'Place on the site', '4wp-faq' ); ?></strong></p>
+			<p class="description">
+				<?php esc_html_e( 'FAQ categories in the sidebar: every page whose FAQ block has those categories. Or pick one page below. Neither: this row stays in the list until a scan drops it.', '4wp-faq' ); ?>
+			</p>
+			<p>
+				<label for="forwp_faq_add_to_post"><?php esc_html_e( 'One page (optional)', '4wp-faq' ); ?></label>
+			</p>
+			<p>
+				<select name="forwp_faq_add_to_post" id="forwp_faq_add_to_post" class="widefat">
+					<option value="0"><?php esc_html_e( '— Use categories, or nowhere —', '4wp-faq' ); ?></option>
+					<?php foreach ( $faq_pages as $faq_page ) : ?>
 						<?php
-						$rendered = do_blocks( $answer_html );
-						echo wp_kses_post( $rendered );
+						$type_object = get_post_type_object( $faq_page->post_type );
+						$type_label  = $type_object && ! empty( $type_object->labels->singular_name )
+							? $type_object->labels->singular_name
+							: $faq_page->post_type;
+						$label = sprintf(
+							'%s — %s (#%d)',
+							$type_label,
+							$faq_page->post_title ? $faq_page->post_title : __( '(no title)', '4wp-faq' ),
+							(int) $faq_page->ID
+						);
 						?>
-					</div>
-				<?php endforeach; ?>
+						<option value="<?php echo esc_attr( (string) $faq_page->ID ); ?>" <?php selected( $selected, (int) $faq_page->ID ); ?>>
+							<?php echo esc_html( $label ); ?>
+						</option>
+					<?php endforeach; ?>
+				</select>
+			</p>
 			<?php endif; ?>
 
 			<?php
 			$schema = '';
-			$question = $original_question ? trim( (string) $original_question ) : trim( (string) $post->post_title );
+			$question = trim( (string) $post->post_title );
 			$answer = isset( $answers[0] ) ? trim( (string) $answers[0] ) : '';
 			if ( '' !== $question && '' !== $answer ) {
 				$schema = wp_json_encode(
@@ -1780,7 +1766,7 @@ class Plugin {
 	 * @param string $value Question text.
 	 * @return string
 	 */
-	private static function normalize_question_key( $value ) {
+	public static function normalize_question_key( $value ) {
 		$normalized = trim( wp_strip_all_tags( (string) $value ) );
 		if ( function_exists( 'mb_strtolower' ) ) {
 			$normalized = mb_strtolower( $normalized );
@@ -1817,7 +1803,7 @@ class Plugin {
 	 * @param string $value Question text.
 	 * @return string
 	 */
-	private static function normalize_question_text( $value ) {
+	public static function normalize_question_text( $value ) {
 		$normalized = trim( (string) $value );
 		$normalized = preg_replace( '/\s*\+\s*$/', '', $normalized );
 

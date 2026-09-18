@@ -15,6 +15,7 @@ WordPress.org users see [readme.txt](../../readme.txt) (`== Changelog ==`). Keep
 
 | File | When |
 |------|------|
+| `2.6.0.md` | Release **2.6.0** — registry edit/add writes FAQ items onto pages; scan still rebuilds from content |
 | `2.5.0.md` | Release **2.5.0** — AI category copy via WordPress Connectors |
 | `2.4.0.md` | Release **2.4.0** — collapsible FAQ category nav with remembered visitor state |
 | `2.3.0.md` | Release **2.3.0** — Dashboard, category SEO title as-is, drag-and-drop category order, compact settings |

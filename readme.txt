@@ -4,18 +4,18 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.5.0
+Stable tag: 2.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-FAQPage schema for core Accordion, optional registry hub, category SEO, and AI via WordPress Connectors.
+FAQPage schema for core Accordion, optional registry you can edit or add from, hub pages, and AI via Connectors.
 
 == Description ==
 
 4WP FAQ wraps WordPress core **Accordion** blocks so you can keep your design and still get:
 
 * **FAQPage JSON-LD** for Google rich results (off by default; turn on when you are ready)
-* An optional **FAQ registry** that aggregates questions across the site after a scan
+* An optional **FAQ registry** (scan of unique questions). Edit one record to push Q/A onto every **Used In** page. **Add FAQ** places a new item on category pages or one page. Site content stays the source of truth.
 * **Hub pages** with List + Categories blocks, pretty category URLs, category SEO titles, collapsible subcategory nav, and drag-and-drop category order (admin + front end)
 * **Drag-and-drop FAQ category order** on **FAQ → Categories** — same order in admin lists and on the front end (List / Categories hub)
 * Optional **AI category copy** through the standard **WordPress AI Client** (Settings → Connectors) — description, display title, SEO title, and SEO description. No custom vendor SDK.
@@ -31,9 +31,11 @@ Source: [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)
 3. Put the **question** in the Accordion Item heading and the **answer** in the panel.
 4. Open **FAQ → Settings** and enable **FAQPage JSON-LD** if you want structured data on the front end.
 5. Optional: complete registry setup → **Rescan** (Dashboard or Settings) → place **4WP FAQ List** and **4WP FAQ Categories** on a hub page or template.
-6. Optional: configure **Settings → Connectors**, then **FAQ → Settings → AI** to allow field markup. On **FAQ → Categories**, edit a term and **Generate with AI**. Apply writes into the form; **Update** still saves.
+6. Optional: **FAQ → Add FAQ** — question, answer, FAQ categories (every matching FAQ block) and/or one page. No place chosen: the row is registry-only until a scan drops it.
+7. Optional: edit a registry FAQ and **Update** — the plugin writes that item onto every **Used In** page (question match uses the previous title if you renamed it).
+8. Optional: configure **Settings → Connectors**, then **FAQ → Settings → AI** to allow field markup. On **FAQ → Categories**, edit a term and **Generate with AI**. Apply writes into the form; **Update** still saves.
 
-Registry posts are created by the scan. Do not create them by hand under “Add New”.
+The registry is a helper. Accordion items on pages are the source of truth. A scan rebuilds the CPT from the site. New answers reuse the markup wrapper of a sibling accordion item on that page.
 
 = Blocks =
 
@@ -47,7 +49,7 @@ Registry posts are created by the scan. Do not create them by hand under “Add 
 
 * Wrap **Accordion** / **Accordion Item** (legacy **Details** still supported)
 * **FAQPage JSON-LD** in the document head — site-wide toggle plus per-block override
-* Optional **FAQ registry** CPT with scan and “Used in” source links
+* Optional **FAQ registry** — scan, **Used In**, edit-to-push, **Add FAQ** onto category pages or one page
 * **FAQ categories** — manage in admin, assign per block, or create on scan from the page
 * **Admin Dashboard** — status metrics, Rescan, hierarchical categories, reused / uncategorized
 * **FSE hub blocks** — List, Categories, Count, Card
@@ -221,6 +223,12 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 
 == Changelog ==
 
+= 2.6.0 =
+* **Registry edit:** Update a FAQ record (title + answer) to write that item onto every **Used In** page. Renamed questions are found via the previous title.
+* **Add FAQ:** create a registry post; FAQ categories append the item to every matching `forwp/faq` block; **One page** limits that to a single post/page that already has a FAQ block. Neither: registry-only until a scan drops it.
+* New answers copy the sibling accordion-item wrapper (heading + panel markup) and fill in your text; the wrapped HTML is saved back on the registry record.
+* Site content stays the source of truth. Rescan / reinstall rebuilds the registry from pages.
+
 = 2.5.0 =
 * **AI Assistant:** generate FAQ category Description, Display title, SEO title, and SEO description via the standard WordPress AI Client (Settings → Connectors).
 * Settings → AI card is always visible; **Allow predefined field markup** stays disabled until Connectors support text generation.
@@ -278,6 +286,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.6.0 =
+Edit or Add FAQ in the registry: Update pushes onto Used In pages; Add FAQ with categories or one page inserts a new accordion item. Unplaced rows are dropped on scan. Site pages stay the source of truth.
 
 = 2.5.0 =
 Optional AI category copy via WordPress Connectors. FAQ → Settings → AI is always visible; enable markup after Connectors are ready, then Generate with AI on a category.
