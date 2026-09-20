@@ -4,7 +4,7 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.0
+Stable tag: 2.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -223,6 +223,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 
 == Changelog ==
 
+= 2.6.1 =
+* **4WP Drive** — register the FAQ wrap for import mapping: H2 FAQ section + H3 Q&A become a `forwp/faq` accordion. Drive Patterns → Integrations Plugins lists this plugin when it is active. See [4WP Drive](https://wordpress.org/plugins/4wp-drive/).
+
 = 2.6.0 =
 * **Registry edit:** Update a FAQ record (title + answer) to write that item onto every **Used In** page. Renamed questions are found via the previous title.
 * **Add FAQ:** create a registry post; FAQ categories append the item to every matching `forwp/faq` block; **One page** limits that to a single post/page that already has a FAQ block. Neither: registry-only until a scan drops it.
@@ -286,6 +289,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.6.1 =
+Registers the FAQ block with 4WP Drive so imported documents can map an FAQ heading to forwp/faq. https://wordpress.org/plugins/4wp-drive/
 
 = 2.6.0 =
 Edit or Add FAQ in the registry: Update pushes onto Used In pages; Add FAQ with categories or one page inserts a new accordion item. Unplaced rows are dropped on scan. Site pages stay the source of truth.

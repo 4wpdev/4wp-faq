@@ -18,6 +18,10 @@ A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq]
 
 JSON-LD works **without** the registry. The registry is a helper: scan unique questions, edit one record to push Q/A onto every **Used In** page, or **Add FAQ** onto category pages / one page. Accordion items on the site stay the source of truth.
 
+## Version 2.6.1
+
+- **4WP Drive** — FAQ wrap for document import: Heading 2 FAQ section + Heading 3 Q&A map to `forwp/faq`. Activate this plugin so Drive Patterns can list the wrap. [4WP Drive on WordPress.org](https://wordpress.org/plugins/4wp-drive/).
+
 ## Version 2.6.0
 
 - **Edit** a registry FAQ (title + answer) → **Update** writes that item onto every **Used In** page. A renamed question is found via the previous title.

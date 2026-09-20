@@ -36,6 +36,7 @@ function get_required_include_files(): array {
 		'includes/class-admin-settings.php',
 		'includes/class-admin-rest.php',
 		'includes/class-registry-push.php',
+		'includes/class-drive-capabilities.php',
 		'includes/class-plugin.php',
 	];
 }

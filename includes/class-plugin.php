@@ -21,6 +21,7 @@ class Plugin {
 		Setup_Rest::init();
 		Admin_Rest::init();
 		Registry_Push::init();
+		Drive_Capabilities::init();
 		Editor_Rest::init();
 		Dashboard_Setup::init();
 		Polylang::init();
