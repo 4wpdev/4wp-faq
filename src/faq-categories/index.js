@@ -239,6 +239,7 @@ registerBlockType( 'forwp/faq-categories', {
 					<ServerSideRender
 						block="forwp/faq-categories"
 						attributes={ attributes }
+						httpMethod="POST"
 					/>
 				</Disabled>
 			</div>

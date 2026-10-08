@@ -4,7 +4,7 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.1
+Stable tag: 2.6.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -223,6 +223,12 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 
 == Changelog ==
 
+= 2.6.2 =
+* **Editor:** List, Categories, and Count previews load with POST, so the editor no longer shows “Error loading block: [object Object]”.
+* **Answers:** color classes copied from dark sections (such as `has-white-50-color`) are stripped on output, so answer text uses the card color.
+* **Settings:** Overview is four blocks — Registry, SEO, AI, Category titles. A click opens that section. Card headers are shorter, and the Connectors notice sits apart from the toggle.
+* **Dashboard:** FAQ Status uses large figures. In two columns the third column stacks on the right instead of covering the first. The main WordPress Dashboard has a short FAQ widget with a link to this dashboard.
+
 = 2.6.1 =
 * **4WP Drive** — register the FAQ wrap for import mapping: H2 FAQ section + H3 Q&A become a `forwp/faq` accordion. Drive Patterns → Integrations Plugins lists this plugin when it is active. See [4WP Drive](https://wordpress.org/plugins/4wp-drive/).
 
@@ -289,6 +295,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.6.2 =
+Editor previews load again, FAQ answers no longer keep a forced light color, Settings opens from Overview blocks, and the FAQ Dashboard shows large figures plus a widget on the main WordPress Dashboard.
 
 = 2.6.1 =
 Registers the FAQ block with 4WP Drive so imported documents can map an FAQ heading to forwp/faq. https://wordpress.org/plugins/4wp-drive/

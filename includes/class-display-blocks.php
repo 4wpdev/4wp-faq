@@ -1045,6 +1045,57 @@ class Display_Blocks {
 	}
 
 	/**
+	 * Drop color classes copied from dark page sections so the answer uses the card color.
+	 *
+	 * @param string $html Answer HTML.
+	 * @return string
+	 */
+	private static function strip_answer_color( $html ) {
+		$html = preg_replace_callback(
+			'/\sclass=("|\')([^"\']*)\1/',
+			static function ( $matches ) {
+				$classes = preg_split( '/\s+/', $matches[2], -1, PREG_SPLIT_NO_EMPTY );
+				$classes = array_values(
+					array_filter(
+						$classes,
+						static function ( $class ) {
+							if ( in_array( $class, [ 'has-text-color', 'has-background', 'has-link-color' ], true ) ) {
+								return false;
+							}
+
+							return ! preg_match( '/^has-.+-(color|background-color)$/', $class );
+						}
+					)
+				);
+
+				if ( ! $classes ) {
+					return '';
+				}
+
+				return ' class=' . $matches[1] . implode( ' ', $classes ) . $matches[1];
+			},
+			$html
+		);
+
+		$html = preg_replace_callback(
+			'/\sstyle=("|\')([^"\']*)\1/',
+			static function ( $matches ) {
+				$style = preg_replace( '/(?:^|;)\s*color\s*:[^;]*/i', '', $matches[2] );
+				$style = trim( (string) $style, " \t;" );
+
+				if ( '' === $style ) {
+					return '';
+				}
+
+				return ' style=' . $matches[1] . $style . $matches[1];
+			},
+			(string) $html
+		);
+
+		return (string) $html;
+	}
+
+	/**
 	 * @param array{text: string, html: string} $answer Answer payload.
 	 * @return string
 	 */
@@ -1053,7 +1104,7 @@ class Display_Blocks {
 		$text = isset( $answer['text'] ) ? trim( (string) $answer['text'] ) : '';
 
 		if ( '' !== $html ) {
-			return '<div class="forwp-faq-card__answer">' . wp_kses_post( $html ) . '</div>';
+			return '<div class="forwp-faq-card__answer">' . wp_kses_post( self::strip_answer_color( $html ) ) . '</div>';
 		}
 
 		if ( '' !== $text ) {

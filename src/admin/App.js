@@ -107,6 +107,7 @@ function SettingsTab() {
 	const [ error, setError ] = useState( '' );
 	const [ notice, setNotice ] = useState( '' );
 	const [ resetOpen, setResetOpen ] = useState( false );
+	const [ section, setSection ] = useState( null );
 
 	const loadAll = useCallback( () => {
 		setLoading( true );
@@ -312,15 +313,109 @@ function SettingsTab() {
 				</Notice>
 			) : null }
 
-			<StatsCard
-				stats={ registry?.stats }
-				setupComplete={ setupComplete }
-				lastScan={ registry?.last_scan_label }
-			/>
+			{ ! section ? (
+				<>
+					<StatsCard
+						stats={ registry?.stats }
+						setupComplete={ setupComplete }
+						lastScan={ registry?.last_scan_label }
+					/>
+					<div className="forwp-faq-overview-grid">
+						<button
+							type="button"
+							className="forwp-faq-overview-card"
+							onClick={ () => setSection( 'registry' ) }
+						>
+							<span className="forwp-faq-overview-card__title">
+								{ __( 'Registry', '4wp-faq' ) }
+							</span>
+							<span className="forwp-faq-overview-card__summary">
+								{ setupComplete
+									? registry?.last_scan_label
+										? sprintf(
+												/* translators: %s: date/time */
+												__( 'Last scan: %s', '4wp-faq' ),
+												registry.last_scan_label
+										  )
+										: __( 'Not scanned yet.', '4wp-faq' )
+									: __( 'Setup is not complete.', '4wp-faq' ) }
+							</span>
+						</button>
+						<button
+							type="button"
+							className="forwp-faq-overview-card"
+							onClick={ () => setSection( 'seo' ) }
+						>
+							<span className="forwp-faq-overview-card__title">
+								{ __( 'SEO', '4wp-faq' ) }
+							</span>
+							<span className="forwp-faq-overview-card__summary">
+								{ sprintf(
+									/* translators: 1: on/off, 2: on/off, 3: count */
+									__(
+										'JSON-LD %1$s · Pretty URLs %2$s · %3$d per group',
+										'4wp-faq'
+									),
+									jsonLdOn
+										? __( 'On', '4wp-faq' )
+										: __( 'Off', '4wp-faq' ),
+									seoUrlsOn
+										? __( 'On', '4wp-faq' )
+										: __( 'Off', '4wp-faq' ),
+									previewPer
+								) }
+							</span>
+						</button>
+						<button
+							type="button"
+							className="forwp-faq-overview-card"
+							onClick={ () => setSection( 'ai' ) }
+						>
+							<span className="forwp-faq-overview-card__title">
+								{ __( 'AI', '4wp-faq' ) }
+							</span>
+							<span className="forwp-faq-overview-card__summary">
+								{ ! aiAvailable
+									? __(
+											'WordPress Connectors are not available.',
+											'4wp-faq'
+									  )
+									: aiFieldMarkupOn
+									? __( 'Field markup is on.', '4wp-faq' )
+									: __( 'Field markup is off.', '4wp-faq' ) }
+							</span>
+						</button>
+						<button
+							type="button"
+							className="forwp-faq-overview-card"
+							onClick={ () => setSection( 'titles' ) }
+						>
+							<span className="forwp-faq-overview-card__title">
+								{ __( 'Category titles', '4wp-faq' ) }
+							</span>
+							<span className="forwp-faq-overview-card__summary">
+								{ __(
+									'On-page title, document title, meta description, and image.',
+									'4wp-faq'
+								) }
+							</span>
+						</button>
+					</div>
+				</>
+			) : (
+				<Button
+					className="forwp-faq-section-back"
+					variant="tertiary"
+					onClick={ () => setSection( null ) }
+				>
+					{ __( 'Overview', '4wp-faq' ) }
+				</Button>
+			) }
 
+			{ section === 'registry' ? (
 			<Card className="forwp-faq-actions-card">
 				<CardHeader>
-					<h2>{ __( 'Settings', '4wp-faq' ) }</h2>
+					<h2>{ __( 'Registry', '4wp-faq' ) }</h2>
 				</CardHeader>
 				<CardBody>
 					<div className="forwp-faq-actions-row">
@@ -351,8 +446,34 @@ function SettingsTab() {
 						</p>
 					) : null }
 
-					<hr className="forwp-faq-actions-divider" />
+					{ setupComplete ? (
+						<>
+							<hr className="forwp-faq-actions-divider" />
+							<p className="forwp-faq-reset-intro">
+								{ __(
+									'Reset setup to change CPT/taxonomy slugs. Categories are removed.',
+									'4wp-faq'
+								) }
+							</p>
+							<Button
+								variant="secondary"
+								isDestructive
+								onClick={ () => setResetOpen( true ) }
+							>
+								{ __( 'Reset setup', '4wp-faq' ) }
+							</Button>
+						</>
+					) : null }
+				</CardBody>
+			</Card>
+			) : null }
 
+			{ section === 'seo' ? (
+			<Card className="forwp-faq-actions-card">
+				<CardHeader>
+					<h2>{ __( 'SEO', '4wp-faq' ) }</h2>
+				</CardHeader>
+				<CardBody>
 					<ToggleControl
 						label={ __( 'FAQPage JSON-LD', '4wp-faq' ) }
 						help={ __(
@@ -387,28 +508,11 @@ function SettingsTab() {
 						max={ 20 }
 						disabled={ savingSeo }
 					/>
-
-					{ setupComplete ? (
-						<>
-							<hr className="forwp-faq-actions-divider" />
-							<p className="forwp-faq-reset-intro">
-								{ __(
-									'Reset setup to change CPT/taxonomy slugs. Categories are removed.',
-									'4wp-faq'
-								) }
-							</p>
-							<Button
-								variant="secondary"
-								isDestructive
-								onClick={ () => setResetOpen( true ) }
-							>
-								{ __( 'Reset setup', '4wp-faq' ) }
-							</Button>
-						</>
-					) : null }
 				</CardBody>
 			</Card>
+			) : null }
 
+			{ section === 'ai' ? (
 			<Card className="forwp-faq-actions-card">
 				<CardHeader>
 					<h2>{ __( 'AI', '4wp-faq' ) }</h2>
@@ -517,7 +621,9 @@ function SettingsTab() {
 					) : null }
 				</CardBody>
 			</Card>
+			) : null }
 
+			{ section === 'titles' ? (
 			<Card className="forwp-faq-actions-card">
 				<CardHeader>
 					<h2>{ __( 'Category titles', '4wp-faq' ) }</h2>
@@ -581,6 +687,7 @@ function SettingsTab() {
 					</ul>
 				</CardBody>
 			</Card>
+			) : null }
 
 			{ resetOpen ? (
 				<Modal

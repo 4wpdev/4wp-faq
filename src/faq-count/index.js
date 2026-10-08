@@ -23,7 +23,7 @@ registerBlockType( 'forwp/faq-count', {
 					</PanelBody>
 				</InspectorControls>
 				<Disabled>
-					<ServerSideRender block="forwp/faq-count" />
+					<ServerSideRender block="forwp/faq-count" httpMethod="POST" />
 				</Disabled>
 			</div>
 		);

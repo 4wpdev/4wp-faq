@@ -18,6 +18,13 @@ A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq]
 
 JSON-LD works **without** the registry. The registry is a helper: scan unique questions, edit one record to push Q/A onto every **Used In** page, or **Add FAQ** onto category pages / one page. Accordion items on the site stay the source of truth.
 
+## Version 2.6.2
+
+- **Editor:** List, Categories, and Count previews use POST, so “Error loading block: [object Object]” does not replace the preview.
+- **Answers:** output drops color classes copied from dark sections, so the answer uses the card color.
+- **Settings:** Overview blocks (Registry, SEO, AI, Category titles) open that section. Shorter card headers; the Connectors notice is separated from the toggle.
+- **Dashboard:** FAQ Status shows large figures. Two-column layout stacks the third column on the right. A short FAQ widget on the main WordPress Dashboard links here.
+
 ## Version 2.6.1
 
 - **4WP Drive** — FAQ wrap for document import: Heading 2 FAQ section + Heading 3 Q&A map to `forwp/faq`. Activate this plugin so Drive Patterns can list the wrap. [4WP Drive on WordPress.org](https://wordpress.org/plugins/4wp-drive/).

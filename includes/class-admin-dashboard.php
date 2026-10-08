@@ -267,87 +267,55 @@ class Admin_Dashboard {
 
 		$rows = [
 			[
-				'class' => 'questions',
 				'url'   => $list,
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Questions <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['total_questions'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['total_questions'] ?? 0 ),
+				'label' => __( 'Questions', '4wp-faq' ),
 			],
 			[
-				'class' => 'categories',
 				'url'   => $cats,
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Categories <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['faq_categories'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['faq_categories'] ?? 0 ),
+				'label' => __( 'Categories', '4wp-faq' ),
 			],
 			[
-				'class' => 'reused',
 				'url'   => $list,
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Reused <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['reused_questions'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['reused_questions'] ?? 0 ),
+				'label' => __( 'Reused', '4wp-faq' ),
 			],
 			[
-				'class' => 'once',
 				'url'   => $list,
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Used once <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['single_use_questions'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['single_use_questions'] ?? 0 ),
+				'label' => __( 'Used once', '4wp-faq' ),
 			],
 			[
-				'class' => 'pages',
 				'url'   => admin_url( 'edit.php?post_type=page' ),
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Pages with FAQ <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['pages_with_faq'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['pages_with_faq'] ?? 0 ),
+				'label' => __( 'Pages with FAQ', '4wp-faq' ),
 			],
 			[
-				'class' => 'posts',
 				'url'   => admin_url( 'edit.php' ),
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Posts with FAQ <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['posts_with_faq'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['posts_with_faq'] ?? 0 ),
+				'label' => __( 'Posts with FAQ', '4wp-faq' ),
 			],
 			[
-				'class' => 'uncat',
 				'url'   => $list,
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Uncategorized <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['uncategorized'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['uncategorized'] ?? 0 ),
+				'label' => __( 'Uncategorized', '4wp-faq' ),
 			],
 			[
-				'class' => 'unused',
 				'url'   => $list,
-				'html'  => sprintf(
-					/* translators: %s: count */
-					__( 'Unused <strong>%s</strong>', '4wp-faq' ),
-					number_format_i18n( (int) ( $stats['unused_questions'] ?? 0 ) )
-				),
+				'value' => (int) ( $stats['unused_questions'] ?? 0 ),
+				'label' => __( 'Unused', '4wp-faq' ),
 			],
 		];
 
-		echo '<ul class="forwp-faq-status-list">';
+		echo '<div class="forwp-faq-stats">';
 		foreach ( $rows as $row ) {
-			echo '<li class="' . esc_attr( $row['class'] ) . '">';
-			echo '<a href="' . esc_url( $row['url'] ) . '">';
-			echo wp_kses( $row['html'], [ 'strong' => [] ] );
-			echo '</a></li>';
+			echo '<a class="forwp-faq-stat-cell" href="' . esc_url( $row['url'] ) . '">';
+			echo '<span class="forwp-faq-stat-cell__value">' . esc_html( number_format_i18n( $row['value'] ) ) . '</span>';
+			echo '<span class="forwp-faq-stat-cell__label">' . esc_html( $row['label'] ) . '</span>';
+			echo '</a>';
 		}
-		echo '</ul>';
+		echo '</div>';
 
 		echo '<div class="forwp-faq-dash-meta">';
 		echo '<span>';

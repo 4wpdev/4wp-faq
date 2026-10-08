@@ -321,6 +321,7 @@ registerBlockType( 'forwp/faq-list', {
 					<ServerSideRender
 						block="forwp/faq-list"
 						attributes={ attributes }
+						httpMethod="POST"
 					/>
 				</Disabled>
 			</div>
