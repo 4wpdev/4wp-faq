@@ -566,6 +566,18 @@ class Plugin {
 	 * @return array<string, int>
 	 */
 	public static function get_registry_stats() {
+		return Polylang::with_language(
+			Polylang::get_admin_language(),
+			[ __CLASS__, 'build_registry_stats' ]
+		);
+	}
+
+	/**
+	 * Registry stats for whatever language the current queries resolve to.
+	 *
+	 * @return array<string, int>
+	 */
+	public static function build_registry_stats() {
 		$stats = [
 			'total_questions'        => 0,
 			'reused_questions'       => 0,
@@ -603,8 +615,7 @@ class Plugin {
 		$reused                   = 0;
 
 		foreach ( $faq_ids as $faq_id ) {
-			$usage = (int) get_post_meta( $faq_id, 'count_usage', true );
-			if ( $usage > 1 ) {
+			if ( Registry_Content::count_public_usage( $faq_id ) > 1 ) {
 				++$reused;
 			}
 		}
@@ -632,7 +643,41 @@ class Plugin {
 	 * @return array<string, mixed>
 	 */
 	public static function get_dashboard_data() {
-		$stats     = self::get_registry_stats();
+		$lang = Polylang::get_admin_language();
+		$data = Polylang::with_language( $lang, [ __CLASS__, 'build_dashboard_data' ] );
+
+		$data['language'] = [
+			'slug' => (string) $lang,
+			'name' => null === $lang ? '' : ( '' === $lang ? __( 'All languages', '4wp-faq' ) : Polylang::get_language_name( $lang ) ),
+		];
+		$data['by_language'] = [];
+
+		if ( '' === $lang ) {
+			foreach ( Polylang::get_language_slugs() as $slug ) {
+				$slice = Polylang::with_language( $slug, [ __CLASS__, 'build_dashboard_data' ] );
+				$stats = isset( $slice['stats'] ) && is_array( $slice['stats'] ) ? $slice['stats'] : [];
+
+				$data['by_language'][] = [
+					'slug'          => $slug,
+					'name'          => Polylang::get_language_name( $slug ),
+					'questions'     => (int) ( $stats['total_questions'] ?? 0 ),
+					'categories'    => (int) ( $stats['faq_categories'] ?? 0 ),
+					'uncategorized' => (int) ( $stats['uncategorized'] ?? 0 ),
+					'pages'         => (int) ( $stats['pages_with_faq'] ?? 0 ),
+				];
+			}
+		}
+
+		return $data;
+	}
+
+	/**
+	 * Dashboard data for whatever language the current queries resolve to.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function build_dashboard_data() {
+		$stats     = self::build_registry_stats();
 		$last_scan = (int) get_option( 'forwp_faq_last_scan_at', 0 );
 		$data      = [
 			'setup_complete'  => Settings::is_setup_complete(),
@@ -686,7 +731,7 @@ class Plugin {
 
 		foreach ( $faq_ids as $faq_id ) {
 			$faq_id = (int) $faq_id;
-			$usage  = (int) get_post_meta( $faq_id, 'count_usage', true );
+			$usage  = Registry_Content::count_public_usage( $faq_id );
 			if ( $usage < 1 ) {
 				++$unused;
 			} elseif ( $usage > 1 ) {

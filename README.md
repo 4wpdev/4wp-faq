@@ -18,6 +18,15 @@ A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq]
 
 JSON-LD works **without** the registry. The registry is a helper: scan unique questions, edit one record to push Q/A onto every **Used In** page, or **Add FAQ** onto category pages / one page. Accordion items on the site stay the source of truth.
 
+## Version 2.6.3
+
+- **Typography:** List, Card, and Categories panels match core (size, appearance, line height, letter spacing, decoration, letter case).
+- **Used in:** sources stay on one line with a separator. Non-public sources are hidden on the front; the editor preview shows them greyed.
+- **Count:** the badge is the sum of the categories on All, or that category’s count on a category page. The number and the label stay on one line.
+- **No results:** an empty search shows a message you can edit, the same way as Query Loop no-results.
+- **Dashboard:** figures follow the Polylang admin language and name it. All languages adds a per-language breakdown. Reused counts public pages only.
+- **Editor preview:** List and Categories follow the page language, and Exclude hides that category.
+
 ## Version 2.6.2
 
 - **Editor:** List, Categories, and Count previews use POST, so “Error loading block: [object Object]” does not replace the preview.

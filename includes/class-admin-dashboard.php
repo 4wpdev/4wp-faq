@@ -308,6 +308,8 @@ class Admin_Dashboard {
 			],
 		];
 
+		self::render_language_note( $data );
+
 		echo '<div class="forwp-faq-stats">';
 		foreach ( $rows as $row ) {
 			echo '<a class="forwp-faq-stat-cell" href="' . esc_url( $row['url'] ) . '">';
@@ -341,6 +343,50 @@ class Admin_Dashboard {
 			echo '</form>';
 		}
 		echo '</div>';
+	}
+
+	/**
+	 * Which language the numbers are for; per-language breakdown when "All languages" is selected.
+	 *
+	 * @param array<string, mixed> $data Dashboard data.
+	 */
+	public static function render_language_note( $data ) {
+		$name = isset( $data['language']['name'] ) ? (string) $data['language']['name'] : '';
+		if ( '' === $name ) {
+			return;
+		}
+
+		echo '<p class="forwp-faq-dash-lang">';
+		echo esc_html(
+			sprintf(
+				/* translators: %s: language name or "All languages" */
+				__( 'Language: %s', '4wp-faq' ),
+				$name
+			)
+		);
+		echo '</p>';
+
+		$rows = isset( $data['by_language'] ) && is_array( $data['by_language'] ) ? $data['by_language'] : [];
+		if ( empty( $rows ) ) {
+			return;
+		}
+
+		echo '<table class="forwp-faq-dash-langs widefat striped"><thead><tr>';
+		echo '<th>' . esc_html__( 'Language', '4wp-faq' ) . '</th>';
+		echo '<th>' . esc_html__( 'Questions', '4wp-faq' ) . '</th>';
+		echo '<th>' . esc_html__( 'Categories', '4wp-faq' ) . '</th>';
+		echo '<th>' . esc_html__( 'Uncategorized', '4wp-faq' ) . '</th>';
+		echo '<th>' . esc_html__( 'Pages with FAQ', '4wp-faq' ) . '</th>';
+		echo '</tr></thead><tbody>';
+		foreach ( $rows as $row ) {
+			echo '<tr>';
+			echo '<td>' . esc_html( (string) ( $row['name'] ?? '' ) ) . '</td>';
+			foreach ( [ 'questions', 'categories', 'uncategorized', 'pages' ] as $key ) {
+				echo '<td>' . esc_html( number_format_i18n( (int) ( $row[ $key ] ?? 0 ) ) ) . '</td>';
+			}
+			echo '</tr>';
+		}
+		echo '</tbody></table>';
 	}
 
 	/**

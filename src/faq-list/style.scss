@@ -15,6 +15,42 @@
 	font-size: 1.1rem;
 }
 
+.forwp-faq-list.has-g-size .forwp-faq-list__group-title {
+	font-size: var(--forwp-faq-g-size);
+}
+
+.forwp-faq-list.has-g-family .forwp-faq-list__group-title {
+	font-family: var(--forwp-faq-g-family);
+}
+
+.forwp-faq-list.has-g-weight .forwp-faq-list__group-title {
+	font-weight: var(--forwp-faq-g-weight);
+}
+
+.forwp-faq-list.has-g-color .forwp-faq-list__group-title {
+	color: var(--forwp-faq-g-color);
+}
+
+.forwp-faq-list.has-g-style .forwp-faq-list__group-title {
+	font-style: var(--forwp-faq-g-style);
+}
+
+.forwp-faq-list.has-g-line .forwp-faq-list__group-title {
+	line-height: var(--forwp-faq-g-line);
+}
+
+.forwp-faq-list.has-g-spacing .forwp-faq-list__group-title {
+	letter-spacing: var(--forwp-faq-g-spacing);
+}
+
+.forwp-faq-list.has-g-decoration .forwp-faq-list__group-title {
+	text-decoration: var(--forwp-faq-g-decoration);
+}
+
+.forwp-faq-list.has-g-transform .forwp-faq-list__group-title {
+	text-transform: var(--forwp-faq-g-transform);
+}
+
 .forwp-faq-list__children {
 	display: flex;
 	flex-direction: column;
@@ -44,8 +80,15 @@
 
 .forwp-faq-list__group[hidden],
 .wp-block-forwp-faq-card[hidden],
-.forwp-faq-card[hidden] {
+.forwp-faq-card[hidden],
+.forwp-faq-list__no-results[hidden] {
 	display: none !important;
+}
+
+.forwp-faq-no-results-editor {
+	margin-top: 0.75rem;
+	padding: 0.5rem 0.75rem;
+	border: 1px dashed rgba(15, 23, 42, 0.25);
 }
 
 .forwp-faq-list-editor__template {
@@ -64,12 +107,4 @@
 
 .forwp-faq-list-editor__help {
 	margin: 0.25rem 0 1rem;
-}
-
-/* Styles-tab ToolsPanel help (Question / Answer). */
-.forwp-faq-typography-help {
-	margin: 0 16px 8px;
-	color: #757575;
-	font-size: 12px;
-	line-height: 1.4;
 }

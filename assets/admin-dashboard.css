@@ -405,3 +405,27 @@ body.forwp-faq-dashboard-page .forwp-faq-columns-prefs label.columns-prefs-4 {
 #dashboard-widgets .forwp-faq-cat-children {
 	border-top: 1px solid #f0f0f1;
 }
+
+#dashboard-widgets .forwp-faq-dash-lang {
+	margin: 0;
+	padding: 8px 12px;
+	border-bottom: 1px solid #f0f0f1;
+	color: #50575e;
+	font-size: 12px;
+}
+
+#dashboard-widgets .forwp-faq-dash-langs {
+	margin: 0;
+	border-width: 0 0 1px;
+}
+
+#dashboard-widgets .forwp-faq-dash-langs th:first-child,
+#dashboard-widgets .forwp-faq-dash-langs td:first-child {
+	padding-left: 12px;
+}
+
+#dashboard-widgets .forwp-faq-dash-langs th,
+#dashboard-widgets .forwp-faq-dash-langs td {
+	padding: 4px 8px;
+	font-size: 12px;
+}

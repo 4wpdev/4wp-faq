@@ -2,20 +2,30 @@ import { registerBlockType } from '@wordpress/blocks';
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import {
 	Disabled,
+	FontSizePicker,
 	FormTokenField,
 	Notice,
 	PanelBody,
 	RadioControl,
+	RangeControl,
 	Spinner,
 	TextControl,
 	ToggleControl,
+	__experimentalToolsPanel as ToolsPanel,
+	__experimentalToolsPanelItem as ToolsPanelItem,
 } from '@wordpress/components';
+import { useSelect } from '@wordpress/data';
 import { useEffect, useMemo, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ServerSideRender from '@wordpress/server-side-render';
 
 import { useSyncCategoryFilters } from '../display/sync-filters';
+import {
+	normalizeFontSize,
+	useEditorTypography,
+	useFaqDropdownMenuProps,
+} from '../display/typography-panels';
 
 import './style.scss';
 
@@ -31,6 +41,11 @@ const useRegistryCategories = () => {
 	const registryReady = !! config.registrySetupComplete;
 	const categoriesPath =
 		config.categoriesPath || '/forwp-faq/v1/editor/categories';
+	const postId = useSelect(
+		( select ) => select( 'core/editor' )?.getCurrentPostId?.(),
+		[]
+	);
+	const query = typeof postId === 'number' && postId > 0 ? `?post_id=${ postId }` : '';
 
 	useEffect( () => {
 		if ( ! registryReady ) {
@@ -41,7 +56,7 @@ const useRegistryCategories = () => {
 		let cancelled = false;
 		setLoading( true );
 
-		apiFetch( { path: categoriesPath } )
+		apiFetch( { path: `${ categoriesPath }${ query }` } )
 			.then( ( response ) => {
 				if ( ! cancelled ) {
 					setTerms( Array.isArray( response?.terms ) ? response.terms : [] );
@@ -61,7 +76,7 @@ const useRegistryCategories = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [ registryReady, categoriesPath ] );
+	}, [ registryReady, categoriesPath, query ] );
 
 	return { terms, loading, registryReady };
 };
@@ -88,8 +103,13 @@ registerBlockType( 'forwp/faq-categories', {
 			seoUrls = false,
 			includeTermIds = [],
 			excludeTermIds = [],
+			allItemFontSize = '',
+			itemFontSize = '',
+			itemGap = '',
 		} = attributes;
 		const { terms, loading, registryReady } = useRegistryCategories();
+		const { fontSizes } = useEditorTypography();
+		const dropdownMenuProps = useFaqDropdownMenuProps();
 		useSyncCategoryFilters( clientId, includeTermIds, excludeTermIds );
 		const suggestions = useMemo(
 			() => terms.map( ( term ) => term.name ),
@@ -234,6 +254,87 @@ registerBlockType( 'forwp/faq-categories', {
 							}
 						/>
 					</PanelBody>
+				</InspectorControls>
+				<InspectorControls group="styles">
+					<ToolsPanel
+						label={ __( 'Sizes', '4wp-faq' ) }
+						panelId="forwp-faq-categories-sizes"
+						__experimentalFirstVisibleItemClass="first"
+						dropdownMenuProps={ dropdownMenuProps }
+						resetAll={ () =>
+							setAttributes( {
+								allItemFontSize: '',
+								itemFontSize: '',
+								itemGap: '',
+							} )
+						}
+					>
+						<ToolsPanelItem
+							label={ __( 'All questions', '4wp-faq' ) }
+							hasValue={ () => !! allItemFontSize }
+							onDeselect={ () => setAttributes( { allItemFontSize: '' } ) }
+							isShownByDefault
+							panelId="forwp-faq-categories-sizes"
+						>
+							<FontSizePicker
+								fontSizes={ fontSizes }
+								value={ allItemFontSize || undefined }
+								onChange={ ( next ) =>
+									setAttributes( {
+										allItemFontSize: normalizeFontSize( next ),
+									} )
+								}
+								withReset={ false }
+								withSlider
+							/>
+						</ToolsPanelItem>
+						<ToolsPanelItem
+							label={ __( 'Headings', '4wp-faq' ) }
+							hasValue={ () => !! itemFontSize }
+							onDeselect={ () => setAttributes( { itemFontSize: '' } ) }
+							isShownByDefault
+							panelId="forwp-faq-categories-sizes"
+						>
+							<FontSizePicker
+								fontSizes={ fontSizes }
+								value={ itemFontSize || undefined }
+								onChange={ ( next ) =>
+									setAttributes( {
+										itemFontSize: normalizeFontSize( next ),
+									} )
+								}
+								withReset={ false }
+								withSlider
+							/>
+						</ToolsPanelItem>
+						<ToolsPanelItem
+							label={ __( 'Space between items', '4wp-faq' ) }
+							hasValue={ () => !! itemGap }
+							onDeselect={ () => setAttributes( { itemGap: '' } ) }
+							isShownByDefault
+							panelId="forwp-faq-categories-sizes"
+						>
+							<RangeControl
+								label={ __( 'Space between items', '4wp-faq' ) }
+								value={ itemGap ? parseFloat( itemGap ) : undefined }
+								onChange={ ( next ) =>
+									setAttributes( {
+										itemGap:
+											next === undefined || next === null
+												? ''
+												: `${ next }px`,
+									} )
+								}
+								min={ 0 }
+								max={ 48 }
+								step={ 1 }
+								allowReset
+								resetFallbackValue={ undefined }
+								__next40pxDefaultSize
+								__nextHasNoMarginBottom
+							/>
+						</ToolsPanelItem>
+					</ToolsPanel>
 				</InspectorControls>
 				<Disabled>
 					<ServerSideRender

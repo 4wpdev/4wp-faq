@@ -74,6 +74,93 @@ final class Polylang {
 	}
 
 	/**
+	 * Language picked in the admin bar filter: slug, '' for all languages, null without Polylang.
+	 *
+	 * Read from user meta so admin pages and REST (Settings app) agree.
+	 */
+	public static function get_admin_language(): ?string {
+		if ( ! self::is_active() || ! function_exists( 'pll_languages_list' ) ) {
+			return null;
+		}
+
+		$lang = (string) get_user_meta( get_current_user_id(), 'pll_filter_content', true );
+
+		return in_array( $lang, self::get_language_slugs(), true ) ? $lang : '';
+	}
+
+	/**
+	 * @return string[]
+	 */
+	public static function get_language_slugs(): array {
+		if ( ! self::is_active() || ! function_exists( 'pll_languages_list' ) ) {
+			return [];
+		}
+
+		$slugs = pll_languages_list( [ 'fields' => 'slug' ] );
+
+		return is_array( $slugs ) ? array_values( array_filter( array_map( 'strval', $slugs ) ) ) : [];
+	}
+
+	/**
+	 * @param string $slug Language slug.
+	 */
+	public static function get_language_name( $slug ): string {
+		if ( ! self::is_active() || ! function_exists( 'pll_languages_list' ) ) {
+			return (string) $slug;
+		}
+
+		$slugs = pll_languages_list( [ 'fields' => 'slug' ] );
+		$names = pll_languages_list( [ 'fields' => 'name' ] );
+		$index = is_array( $slugs ) ? array_search( $slug, $slugs, true ) : false;
+
+		return false !== $index && isset( $names[ $index ] ) ? (string) $names[ $index ] : (string) $slug;
+	}
+
+	/**
+	 * Run a callback with every post/term query forced to one language ('' = all languages).
+	 *
+	 * @param string|null $lang Language slug, '' for all, null = leave queries untouched.
+	 * @param callable    $fn   Callback.
+	 * @return mixed
+	 */
+	public static function with_language( $lang, callable $fn ) {
+		if ( null === $lang || ! self::is_active() ) {
+			return $fn();
+		}
+
+		$hooks = self::force_language( $lang );
+
+		try {
+			return $fn();
+		} finally {
+			remove_action( 'parse_query', $hooks[0], 0 );
+			remove_filter( 'get_terms_args', $hooks[1], 0 );
+		}
+	}
+
+	/**
+	 * Force every following post/term query to one language ('' = all languages).
+	 *
+	 * @param string $lang Language slug.
+	 * @return callable[] The two hooked callbacks (parse_query, get_terms_args).
+	 */
+	public static function force_language( $lang ): array {
+		$posts = static function ( $query ) use ( $lang ) {
+			$query->query_vars['lang'] = $lang;
+		};
+		$terms = static function ( $args ) use ( $lang ) {
+			$args['lang'] = $lang;
+			return $args;
+		};
+
+		// Before Polylang's own parse_query / get_terms_args handlers read `lang`.
+		add_action( 'parse_query', $posts, 0 );
+		add_filter( 'get_terms_args', $terms, 0 );
+
+		return [ $posts, $terms ];
+	}
+
+	/**
 	 * Language slug for a post, or empty when unknown / monolingual.
 	 *
 	 * @param int $post_id Post ID.

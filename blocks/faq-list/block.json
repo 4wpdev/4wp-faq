@@ -45,6 +45,10 @@
 			"type": "string",
 			"default": "Used in"
 		},
+		"cardSourcesSeparator": {
+			"type": "string",
+			"default": ", "
+		},
 		"cardShowPostType": {
 			"type": "boolean",
 			"default": false
@@ -54,6 +58,10 @@
 			"default": {}
 		},
 		"cardAnswerStyle": {
+			"type": "object",
+			"default": {}
+		},
+		"groupTitleStyle": {
 			"type": "object",
 			"default": {}
 		}

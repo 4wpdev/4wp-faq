@@ -1,0 +1,30 @@
+{
+	"$schema": "https://schemas.wp.org/trunk/block.json",
+	"apiVersion": 3,
+	"name": "forwp/faq-no-results",
+	"title": "4WP FAQ No Results",
+	"category": "widgets",
+	"icon": "info-outline",
+	"description": "Content shown when the FAQ search finds nothing.",
+	"keywords": ["faq", "no results", "search", "4wp"],
+	"textdomain": "4wp-faq",
+	"parent": ["forwp/faq-list"],
+	"supports": {
+		"html": false,
+		"className": true,
+		"inserter": false,
+		"interactivity": true,
+		"color": {
+			"text": true,
+			"background": true,
+			"link": true
+		},
+		"typography": {
+			"fontSize": true
+		},
+		"spacing": {
+			"padding": true,
+			"margin": true
+		}
+	}
+}

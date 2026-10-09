@@ -7,6 +7,8 @@
 
 namespace ForWP\FAQ;
 
+use ForWP\FAQ\Integrations\Polylang;
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -19,6 +21,7 @@ class Display_Blocks {
 	public const CARD_BLOCK       = 'forwp/faq-card';
 	public const CATEGORIES_BLOCK = 'forwp/faq-categories';
 	public const COUNT_BLOCK      = 'forwp/faq-count';
+	public const NO_RESULTS_BLOCK = 'forwp/faq-no-results';
 	public const STORE            = 'forwp/faq';
 
 	public const LIST_SCRIPT       = 'forwp-faq-list-editor';
@@ -37,6 +40,7 @@ class Display_Blocks {
 		Faq_Filter::init();
 		add_action( 'init', [ __CLASS__, 'register_blocks' ] );
 		add_action( 'enqueue_block_editor_assets', [ __CLASS__, 'localize_editor_scripts' ], 20 );
+		add_filter( 'rest_pre_dispatch', [ __CLASS__, 'strip_unknown_preview_attributes' ], 10, 3 );
 		add_filter( 'render_block_core/search', [ __CLASS__, 'render_related_search' ], 10, 2 );
 		/**
 		 * Shortcode [forwp_faq_count]. Same live number as block `forwp/faq-count`.
@@ -74,6 +78,11 @@ class Display_Blocks {
 				'script' => self::COUNT_SCRIPT,
 				'style'  => self::LIST_STYLE,
 				'render' => [ __CLASS__, 'render_count' ],
+			],
+			'faq-no-results' => [
+				'script' => self::LIST_SCRIPT,
+				'style'  => self::LIST_STYLE,
+				'render' => [ __CLASS__, 'render_no_results' ],
 			],
 		];
 
@@ -183,11 +192,79 @@ class Display_Blocks {
 			'seoUrlsEnabled'        => Settings::is_seo_urls_enabled(),
 		];
 
-		foreach ( [ self::LIST_SCRIPT, self::CARD_SCRIPT, self::CATEGORIES_SCRIPT, self::COUNT_SCRIPT ] as $handle ) {
-			if ( wp_script_is( $handle, 'registered' ) ) {
+		$registry = \WP_Block_Type_Registry::get_instance();
+
+		foreach ( [ self::LIST_BLOCK, self::CARD_BLOCK, self::CATEGORIES_BLOCK, self::COUNT_BLOCK ] as $block_name ) {
+			$block = $registry->get_registered( $block_name );
+
+			if ( ! $block || empty( $block->editor_script_handles ) ) {
+				continue;
+			}
+
+			foreach ( $block->editor_script_handles as $handle ) {
 				wp_localize_script( $handle, 'forwpFaqDisplay', $config );
 			}
 		}
+	}
+
+	/**
+	 * Drop attributes the editor added but this block does not register.
+	 *
+	 * Other plugins attach attributes to every block in the editor. The block
+	 * renderer rejects unknown keys with HTTP 400, and the preview then shows
+	 * "Error loading block: [object Object]".
+	 *
+	 * @param mixed            $result  Response to replace, or null to continue.
+	 * @param \WP_REST_Server  $server  Server instance.
+	 * @param \WP_REST_Request $request Request used to generate the response.
+	 * @return mixed
+	 */
+	public static function strip_unknown_preview_attributes( $result, $server, $request ) {
+		unset( $server );
+
+		if ( null !== $result || ! $request instanceof \WP_REST_Request ) {
+			return $result;
+		}
+
+		$route = $request->get_route();
+		$prefix = '/wp/v2/block-renderer/';
+
+		if ( ! is_string( $route ) || ! str_starts_with( $route, $prefix ) ) {
+			return $result;
+		}
+
+		$name = rawurldecode( substr( $route, strlen( $prefix ) ) );
+		$ours = [ self::LIST_BLOCK, self::CARD_BLOCK, self::CATEGORIES_BLOCK, self::COUNT_BLOCK ];
+
+		if ( ! in_array( $name, $ours, true ) ) {
+			return $result;
+		}
+
+		// Polylang does not filter REST queries: preview in the edited page's language, like the front end.
+		$post_id = (int) $request->get_param( 'post_id' );
+		if ( $post_id > 0 ) {
+			$lang = Polylang::get_post_language( $post_id );
+			if ( '' !== $lang ) {
+				Polylang::force_language( $lang );
+			}
+		}
+
+		$attributes = $request->get_param( 'attributes' );
+
+		if ( ! is_array( $attributes ) ) {
+			return $result;
+		}
+
+		$block = \WP_Block_Type_Registry::get_instance()->get_registered( $name );
+
+		if ( ! $block ) {
+			return $result;
+		}
+
+		$allowed = array_fill_keys( array_keys( $block->get_attributes() ), true );
+		$request->set_param( 'attributes', array_intersect_key( $attributes, $allowed ) );
+
+		return $result;
 	}
 
 	/**
@@ -251,12 +328,17 @@ class Display_Blocks {
 
 		self::ensure_runtime();
 
+		$group_title = self::group_title_vars( $attributes['groupTitleStyle'] ?? [] );
+
 		$wrapper_attrs = [
-			'class'               => 'forwp-faq-list is-layout-' . $layout,
+			'class'               => trim( 'forwp-faq-list is-layout-' . $layout . ' ' . $group_title['class'] ),
 			'data-wp-interactive' => self::STORE,
 		];
 
-		$typo_style = self::typography_style_attr( $card_attrs );
+		$typo_style = implode(
+			';',
+			array_filter( [ self::typography_style_attr( $card_attrs ), $group_title['style'] ] )
+		);
 		if ( '' !== $typo_style ) {
 			$wrapper_attrs['style'] = $typo_style;
 		}
@@ -288,9 +370,67 @@ class Display_Blocks {
 			}
 		}
 
+		$html .= self::render_list_no_results( $block );
 		$html .= '</div>';
 
 		return $html;
+	}
+
+	/**
+	 * The list's inner No Results block, or a default message for lists saved before it existed.
+	 *
+	 * @param \WP_Block|null $block List block instance.
+	 * @return string
+	 */
+	private static function render_list_no_results( $block ) {
+		if ( $block instanceof \WP_Block && ! empty( $block->parsed_block['innerBlocks'] ) ) {
+			foreach ( $block->parsed_block['innerBlocks'] as $inner ) {
+				if ( self::NO_RESULTS_BLOCK === ( $inner['blockName'] ?? '' ) ) {
+					return render_block( $inner );
+				}
+			}
+		}
+
+		return '<div ' . self::plain_attributes( self::no_results_attrs() ) . ' hidden><p>'
+			. esc_html__( 'No questions found. Try another search.', '4wp-faq' )
+			. '</p></div>';
+	}
+
+	/**
+	 * Render 4WP FAQ No Results (hidden until a search matches nothing).
+	 *
+	 * @param array  $attributes Block attributes.
+	 * @param string $content    Inner blocks HTML.
+	 * @return string
+	 */
+	public static function render_no_results( $attributes, $content = '' ) {
+		unset( $attributes );
+
+		return '<div ' . get_block_wrapper_attributes( self::no_results_attrs() ) . ' hidden>' . $content . '</div>';
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	private static function no_results_attrs() {
+		return [
+			'class'                => 'forwp-faq-list__no-results',
+			'data-wp-interactive'  => self::STORE,
+			'data-wp-bind--hidden' => '!state.hasNoResults',
+		];
+	}
+
+	/**
+	 * @param array<string, string> $attrs Attribute map.
+	 * @return string
+	 */
+	private static function plain_attributes( $attrs ) {
+		$out = '';
+		foreach ( $attrs as $name => $value ) {
+			$out .= ' ' . $name . '="' . esc_attr( $value ) . '"';
+		}
+
+		return ltrim( $out );
 	}
 
 	/**
@@ -314,9 +454,9 @@ class Display_Blocks {
 		$all_label        = isset( $attributes['allLabel'] ) && is_string( $attributes['allLabel'] ) && '' !== $attributes['allLabel']
 			? $attributes['allLabel']
 			: __( 'All categories', '4wp-faq' );
-		$nav_label        = isset( $attributes['label'] ) && is_string( $attributes['label'] ) && '' !== $attributes['label']
-			? $attributes['label']
-			: __( 'Categories', '4wp-faq' );
+		$nav_label = isset( $attributes['label'] ) && is_string( $attributes['label'] )
+			? trim( $attributes['label'] )
+			: '';
 
 		if ( 'horizontal' !== $orientation ) {
 			$orientation = 'vertical';
@@ -329,12 +469,17 @@ class Display_Blocks {
 			$nav_class .= ' is-collapsible';
 		}
 
-		$wrapper = get_block_wrapper_attributes(
-			[
-				'class'               => $nav_class,
-				'data-wp-interactive' => self::STORE,
-			]
-		);
+		$wrapper_attrs = [
+			'class'                       => $nav_class,
+			'data-wp-interactive'         => self::STORE,
+			'data-wp-class--is-menu-open' => 'state.isMenuOpen',
+		];
+		$size_style    = self::categories_size_vars( $attributes );
+		if ( '' !== $size_style ) {
+			$wrapper_attrs['style'] = $size_style;
+		}
+
+		$wrapper = get_block_wrapper_attributes( $wrapper_attrs );
 
 		if ( ! Settings::is_setup_complete() ) {
 			return sprintf(
@@ -350,9 +495,32 @@ class Display_Blocks {
 			? wp_unique_id( 'forwp-faq-cats-label-' )
 			: 'forwp-faq-cats-label';
 
-		$html  = '<nav ' . $wrapper . ' aria-labelledby="' . esc_attr( $label_id ) . '">';
-		$html .= '<p class="forwp-faq-categories__label" id="' . esc_attr( $label_id ) . '">' . esc_html( $nav_label ) . '</p>';
-		$html .= '<ul class="forwp-faq-categories__list" role="list">';
+		$list_id = function_exists( 'wp_unique_id' )
+			? wp_unique_id( 'forwp-faq-cats-list-' )
+			: 'forwp-faq-cats-list';
+
+		$html = '<nav ' . $wrapper;
+		if ( '' !== $nav_label ) {
+			$html .= ' aria-labelledby="' . esc_attr( $label_id ) . '"';
+		}
+		$html .= '>';
+		if ( '' !== $nav_label ) {
+			$html .= '<p class="forwp-faq-categories__label" id="' . esc_attr( $label_id ) . '">' . esc_html( $nav_label ) . '</p>';
+		}
+		$html .= '<button type="button" class="forwp-faq-categories__menu"';
+		$html .= ' data-wp-on--click="actions.toggleMenu"';
+		$html .= ' data-wp-bind--aria-expanded="state.isMenuOpen"';
+		$html .= ' aria-expanded="false" aria-controls="' . esc_attr( $list_id ) . '"';
+		if ( '' === $nav_label ) {
+			$html .= ' aria-label="' . esc_attr__( 'Categories', '4wp-faq' ) . '"';
+		}
+		$html .= '>';
+		$html .= '<svg class="forwp-faq-categories__menu-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2 4h12M2 8h12M2 12h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+		if ( '' !== $nav_label ) {
+			$html .= '<span class="forwp-faq-categories__menu-text">' . esc_html( $nav_label ) . '</span>';
+		}
+		$html .= '</button>';
+		$html .= '<ul class="forwp-faq-categories__list" id="' . esc_attr( $list_id ) . '" role="list">';
 
 		if ( $show_all ) {
 			$all_url = Faq_Filter::get_nav_url( '', $seo_urls );
@@ -381,26 +549,69 @@ class Display_Blocks {
 	public static function render_count( $attributes ) {
 		unset( $attributes );
 
+		return self::count_markup( true );
+	}
+
+	/**
+	 * Count span markup.
+	 *
+	 * @param bool $use_block_wrapper False for the shortcode: otherwise the enclosing block's classes (e.g. alignfull) leak in.
+	 * @return string
+	 */
+	private static function count_markup( $use_block_wrapper ) {
 		self::ensure_runtime();
 
 		$context = self::get_list_query_context();
-		$count   = Registry_Content::count_visible_posts(
-			$context['includeTermIds'],
-			$context['excludeTermIds'],
-			$context['activeSlug'],
-			$context['previewLimit'],
-			$context['layout']
-		);
+		$totals  = self::count_totals( $context );
+		$count   = (int) ( $totals[ $context['activeSlug'] ] ?? 0 );
 
-		$wrapper = get_block_wrapper_attributes(
-			[
-				'class'               => 'forwp-faq-count',
-				'data-wp-interactive' => self::STORE,
-				'data-wp-text'        => 'state.visibleCount',
-			]
-		);
+		$attrs = [
+			'class'               => 'forwp-faq-count',
+			'data-wp-interactive' => self::STORE,
+			'data-wp-text'        => 'state.visibleCount',
+		];
+
+		$wrapper = $use_block_wrapper ? get_block_wrapper_attributes( $attrs ) : self::plain_attributes( $attrs );
 
 		return '<span ' . $wrapper . '>' . esc_html( (string) $count ) . '</span>';
+	}
+
+	/**
+	 * Question totals matching the category nav counts.
+	 *
+	 * Key '' = sum of top-level category counts; each slug = that category's nav count.
+	 *
+	 * @param array $context From get_list_query_context().
+	 * @return array<string, int>
+	 */
+	private static function count_totals( $context ) {
+		static $cache = null;
+		if ( null !== $cache ) {
+			return $cache;
+		}
+
+		$totals = [ '' => 0 ];
+		$walk   = static function ( $nodes, $top ) use ( &$walk, &$totals ) {
+			foreach ( (array) $nodes as $node ) {
+				$term = $node['term'] ?? null;
+				if ( ! $term instanceof \WP_Term ) {
+					continue;
+				}
+				$count                  = isset( $node['inclusive_count'] ) ? (int) $node['inclusive_count'] : (int) $term->count;
+				$totals[ $term->slug ] = $count;
+				if ( $top ) {
+					$totals[''] += $count;
+				}
+				if ( ! empty( $node['children'] ) ) {
+					$walk( $node['children'], false );
+				}
+			}
+		};
+		$walk( Registry_Content::get_nav_tree( $context['includeTermIds'], $context['excludeTermIds'] ), true );
+
+		$cache = $totals;
+
+		return $totals;
 	}
 
 	/**
@@ -412,7 +623,7 @@ class Display_Blocks {
 	public static function shortcode_count( $atts = [] ) {
 		unset( $atts );
 
-		return self::render_count( [] );
+		return self::count_markup( false );
 	}
 
 	/**
@@ -636,7 +847,7 @@ class Display_Blocks {
 	 *
 	 * @param array          $attributes List attributes.
 	 * @param \WP_Block|null $block      List block instance.
-	 * @return array{displayMode: string, showSources: bool, sourcesLabel: string, showPostType: bool, questionStyle: array, answerStyle: array}
+	 * @return array{displayMode: string, showSources: bool, sourcesLabel: string, sourcesSeparator: string, showPostType: bool, questionStyle: array, answerStyle: array}
 	 */
 	private static function resolve_card_attributes( $attributes, $block ) {
 		$inner = [];
@@ -666,6 +877,14 @@ class Display_Blocks {
 			$sources_label = __( 'Used in', '4wp-faq' );
 		}
 
+		if ( array_key_exists( 'sourcesSeparator', $inner ) ) {
+			$sources_separator = (string) $inner['sourcesSeparator'];
+		} elseif ( isset( $attributes['cardSourcesSeparator'] ) ) {
+			$sources_separator = (string) $attributes['cardSourcesSeparator'];
+		} else {
+			$sources_separator = ', ';
+		}
+
 		if ( array_key_exists( 'showPostType', $inner ) ) {
 			$show_post_type = ! empty( $inner['showPostType'] );
 		} else {
@@ -687,18 +906,19 @@ class Display_Blocks {
 		}
 
 		return [
-			'displayMode'   => $display,
-			'showSources'   => $show_sources,
-			'sourcesLabel'  => $sources_label,
-			'showPostType'  => $show_post_type,
-			'questionStyle' => self::sanitize_typography_style( $question_style ),
-			'answerStyle'   => self::sanitize_typography_style( $answer_style ),
+			'displayMode'      => $display,
+			'showSources'      => $show_sources,
+			'sourcesLabel'     => $sources_label,
+			'sourcesSeparator' => $sources_separator,
+			'showPostType'     => $show_post_type,
+			'questionStyle'    => self::sanitize_typography_style( $question_style ),
+			'answerStyle'      => self::sanitize_typography_style( $answer_style ),
 		];
 	}
 
 	/**
 	 * @param mixed $style Raw style object.
-	 * @return array{fontSize?: string, fontFamily?: string, fontWeight?: string, color?: string}
+	 * @return array<string, string> Keys from typography_var_suffixes().
 	 */
 	private static function sanitize_typography_style( $style ) {
 		if ( ! is_array( $style ) ) {
@@ -735,7 +955,43 @@ class Display_Blocks {
 			}
 		}
 
+		$patterns = [
+			'fontStyle'      => '/^(normal|italic)$/',
+			'lineHeight'     => '/^\d+(\.\d+)?(px|rem|em|%)?$/',
+			'letterSpacing'  => '/^-?\d+(\.\d+)?(px|rem|em)$/',
+			'textDecoration' => '/^(none|underline|line-through)$/',
+			'textTransform'  => '/^(none|uppercase|lowercase|capitalize)$/',
+		];
+		foreach ( $patterns as $key => $pattern ) {
+			if ( ! isset( $style[ $key ] ) || '' === $style[ $key ] ) {
+				continue;
+			}
+			$val = trim( sanitize_text_field( (string) $style[ $key ] ) );
+			if ( preg_match( $pattern, $val ) ) {
+				$out[ $key ] = $val;
+			}
+		}
+
 		return $out;
+	}
+
+	/**
+	 * Style keys → CSS custom property suffix (shared by q / a / g prefixes).
+	 *
+	 * @return array<string, string>
+	 */
+	private static function typography_var_suffixes() {
+		return [
+			'fontSize'       => 'size',
+			'fontFamily'     => 'family',
+			'fontWeight'     => 'weight',
+			'fontStyle'      => 'style',
+			'lineHeight'     => 'line',
+			'letterSpacing'  => 'spacing',
+			'textDecoration' => 'decoration',
+			'textTransform'  => 'transform',
+			'color'          => 'color',
+		];
 	}
 
 	/**
@@ -840,16 +1096,11 @@ class Display_Blocks {
 			? $card_attrs['answerStyle']
 			: [];
 
-		$map = [
-			'--forwp-faq-q-size'   => $question['fontSize'] ?? '',
-			'--forwp-faq-q-family' => $question['fontFamily'] ?? '',
-			'--forwp-faq-q-weight' => $question['fontWeight'] ?? '',
-			'--forwp-faq-q-color'  => $question['color'] ?? '',
-			'--forwp-faq-a-size'   => $answer['fontSize'] ?? '',
-			'--forwp-faq-a-family' => $answer['fontFamily'] ?? '',
-			'--forwp-faq-a-weight' => $answer['fontWeight'] ?? '',
-			'--forwp-faq-a-color'  => $answer['color'] ?? '',
-		];
+		$map = [];
+		foreach ( self::typography_var_suffixes() as $key => $suffix ) {
+			$map[ '--forwp-faq-q-' . $suffix ] = $question[ $key ] ?? '';
+			$map[ '--forwp-faq-a-' . $suffix ] = $answer[ $key ] ?? '';
+		}
 
 		$parts = [];
 		foreach ( $map as $prop => $val ) {
@@ -861,6 +1112,33 @@ class Display_Blocks {
 		}
 
 		return implode( ';', $parts );
+	}
+
+	/**
+	 * Category title typography: CSS variables plus one class per set property.
+	 *
+	 * Classes keep theme heading styles untouched for properties left empty.
+	 *
+	 * @param mixed $style Raw groupTitleStyle attribute.
+	 * @return array{class: string, style: string}
+	 */
+	private static function group_title_vars( $style ) {
+		$clean   = self::sanitize_typography_style( $style );
+		$vars    = [];
+		$classes = [];
+
+		foreach ( self::typography_var_suffixes() as $key => $suffix ) {
+			if ( empty( $clean[ $key ] ) ) {
+				continue;
+			}
+			$vars[]    = '--forwp-faq-g-' . $suffix . ':' . $clean[ $key ];
+			$classes[] = 'has-g-' . $suffix;
+		}
+
+		return [
+			'class' => implode( ' ', $classes ),
+			'style' => implode( ';', $vars ),
+		];
 	}
 
 	/**
@@ -900,8 +1178,9 @@ class Display_Blocks {
 
 			$html .= '<section class="' . esc_attr( $group_class ) . '"' . self::context_attr(
 				[
-					'slug'      => $slug,
-					'ancestors' => implode( ' ', $ancestors ),
+					'slug'       => $slug,
+					'ancestors'  => implode( ' ', $ancestors ),
+					'searchText' => self::group_search_text( $posts, $children ),
 				]
 			) . ' data-wp-bind--hidden="!state.isGroupVisible"' . ( $hidden ? ' hidden' : '' ) . '>';
 
@@ -925,6 +1204,36 @@ class Display_Blocks {
 		}
 
 		return $html;
+	}
+
+	/**
+	 * Question and answer text for this group and its children, for search.
+	 *
+	 * @param \WP_Post[] $posts    Posts rendered in the group.
+	 * @param array[]    $children Nested groups.
+	 * @return string
+	 */
+	private static function group_search_text( $posts, $children ) {
+		$parts = [];
+
+		foreach ( $posts as $post ) {
+			if ( ! $post instanceof \WP_Post ) {
+				continue;
+			}
+			$answer  = Registry_Content::get_answer( (int) $post->ID );
+			$parts[] = strtolower( trim( get_the_title( $post ) . ' ' . ( $answer['text'] ?? '' ) ) );
+		}
+
+		foreach ( $children as $child ) {
+			if ( ! is_array( $child ) ) {
+				continue;
+			}
+			$child_posts = isset( $child['posts'] ) && is_array( $child['posts'] ) ? $child['posts'] : [];
+			$child_nodes = isset( $child['children'] ) && is_array( $child['children'] ) ? $child['children'] : [];
+			$parts[]     = self::group_search_text( $child_posts, $child_nodes );
+		}
+
+		return trim( implode( ' ', array_filter( $parts ) ) );
 	}
 
 	/**
@@ -981,6 +1290,9 @@ class Display_Blocks {
 		$sources_label = isset( $attributes['sourcesLabel'] )
 			? sanitize_text_field( (string) $attributes['sourcesLabel'] )
 			: __( 'Used in', '4wp-faq' );
+		$sources_separator = isset( $attributes['sourcesSeparator'] )
+			? (string) $attributes['sourcesSeparator']
+			: ', ';
 		if ( 'heading' !== $display ) {
 			$display = 'accordion';
 		}
@@ -1018,7 +1330,7 @@ class Display_Blocks {
 		$hidden_attr = ' data-wp-bind--hidden="!state.isItemVisible"' . ( $hidden ? ' hidden' : '' );
 
 		$body  = self::render_answer( $answer );
-		$body .= self::render_sources( $sources, $sources_label, $show_type );
+		$body .= self::render_sources( $sources, $sources_label, $show_type, $sources_separator );
 
 		if ( 'heading' === $display ) {
 			return sprintf(
@@ -1115,12 +1427,13 @@ class Display_Blocks {
 	}
 
 	/**
-	 * @param list<array{title: string, url: string, post_type_label: string}> $sources        Sources.
-	 * @param string                                                           $sources_label  Label placeholder.
-	 * @param bool                                                             $show_post_type Show CPT type.
+	 * @param list<array{title: string, url: string, post_type_label: string, is_public?: bool}> $sources        Sources.
+	 * @param string                                                                            $sources_label  Label placeholder.
+	 * @param bool                                                                              $show_post_type Show CPT type.
+	 * @param string                                                                            $separator      Between items.
 	 * @return string
 	 */
-	private static function render_sources( $sources, $sources_label = '', $show_post_type = false ) {
+	private static function render_sources( $sources, $sources_label = '', $show_post_type = false, $separator = ', ' ) {
 		if ( empty( $sources ) ) {
 			return '';
 		}
@@ -1129,18 +1442,25 @@ class Display_Blocks {
 		if ( '' !== $sources_label ) {
 			$html .= '<p class="forwp-faq-card__sources-label">' . esc_html( $sources_label ) . '</p>';
 		}
-		$html .= '<ul class="forwp-faq-card__sources-list">';
+		$html .= '<p class="forwp-faq-card__sources-list">';
 
+		$items = [];
 		foreach ( $sources as $source ) {
-			$html .= '<li class="forwp-faq-card__sources-item">';
-			$html .= '<a href="' . esc_url( $source['url'] ) . '">' . esc_html( $source['title'] ) . '</a>';
+			$is_public = ! isset( $source['is_public'] ) || $source['is_public'];
+			$item      = $is_public
+				? '<a class="forwp-faq-card__sources-item" href="' . esc_url( $source['url'] ) . '">' . esc_html( $source['title'] ) . '</a>'
+				: '<span class="forwp-faq-card__sources-item is-inactive" title="' . esc_attr__( 'Not public: visible to editors only', '4wp-faq' ) . '">' . esc_html( $source['title'] ) . '</span>';
 			if ( $show_post_type && ! empty( $source['post_type_label'] ) ) {
-				$html .= ' <span class="forwp-faq-card__sources-type">' . esc_html( $source['post_type_label'] ) . '</span>';
+				$item .= ' <span class="forwp-faq-card__sources-type">' . esc_html( $source['post_type_label'] ) . '</span>';
 			}
-			$html .= '</li>';
+			$items[] = $item;
 		}
 
-		$html .= '</ul></div>';
+		$html .= implode(
+			'<span class="forwp-faq-card__sources-separator">' . esc_html( $separator ) . '</span>',
+			$items
+		);
+		$html .= '</p></div>';
 
 		return $html;
 	}
@@ -1262,6 +1582,30 @@ class Display_Blocks {
 	}
 
 	/**
+	 * CSS variables for the All link, category names, and the gap between them.
+	 *
+	 * @param array $attributes Block attributes.
+	 * @return string
+	 */
+	private static function categories_size_vars( $attributes ) {
+		$map   = [
+			'allItemFontSize' => '--forwp-faq-all-size',
+			'itemFontSize'    => '--forwp-faq-item-size',
+			'itemGap'         => '--forwp-faq-item-gap',
+		];
+		$parts = [];
+
+		foreach ( $map as $key => $var ) {
+			$size = self::sanitize_css_size( $attributes[ $key ] ?? '' );
+			if ( '' !== $size ) {
+				$parts[] = $var . ':' . $size;
+			}
+		}
+
+		return implode( ';', $parts );
+	}
+
+	/**
 	 * One category nav item.
 	 *
 	 * @param string   $slug               Term slug (empty = all).
@@ -1303,6 +1647,9 @@ class Display_Blocks {
 		);
 
 		$classes = 'forwp-faq-categories__item';
+		if ( '' === $slug ) {
+			$classes .= ' is-all';
+		}
 		if ( $is_active ) {
 			$classes .= ' is-active';
 		}
@@ -1373,13 +1720,7 @@ class Display_Blocks {
 		}
 
 		$context = self::get_list_query_context();
-		$count   = Registry_Content::count_visible_posts(
-			$context['includeTermIds'],
-			$context['excludeTermIds'],
-			$context['activeSlug'],
-			$context['previewLimit'],
-			$context['layout']
-		);
+		$totals  = self::count_totals( $context );
 
 		$done = true;
 		wp_interactivity_state(
@@ -1387,7 +1728,8 @@ class Display_Blocks {
 			[
 				'category'       => $context['activeSlug'],
 				'search'         => '',
-				'visibleCount'   => $count,
+				'visibleCount'   => (int) ( $totals[ $context['activeSlug'] ] ?? 0 ),
+				'totals'         => (object) $totals,
 				'openBranches'   => (object) [],
 				'isNavActive'    => static function () {
 					$state    = wp_interactivity_state( 'forwp/faq' );

@@ -63,10 +63,48 @@ class Registry_Content {
 	}
 
 	/**
+	 * Published public pages/posts using this FAQ (internal post types excluded).
+	 *
+	 * @param int $post_id Registry post ID.
+	 * @return int
+	 */
+	public static function count_public_usage( $post_id ) {
+		$used_in = get_post_meta( (int) $post_id, 'used_in_posts', true );
+		if ( ! is_array( $used_in ) ) {
+			return 0;
+		}
+
+		$count = 0;
+		foreach ( array_unique( array_map( 'intval', $used_in ) ) as $source_id ) {
+			$source = $source_id > 0 ? get_post( $source_id ) : null;
+			if ( ! $source instanceof \WP_Post || 'publish' !== $source->post_status ) {
+				continue;
+			}
+			$type = get_post_type_object( $source->post_type );
+			if ( $type && ! empty( $type->public ) ) {
+				++$count;
+			}
+		}
+
+		return $count;
+	}
+
+	/**
+	 * Block editor server-side preview (REST), not the front end.
+	 *
+	 * @return bool
+	 */
+	private static function is_editor_preview() {
+		return function_exists( 'wp_is_serving_rest_request' )
+			? wp_is_serving_rest_request()
+			: ( defined( 'REST_REQUEST' ) && REST_REQUEST );
+	}
+
+	/**
 	 * Public pages/posts where this FAQ registry entry appears.
 	 *
 	 * @param int $post_id Registry post ID.
-	 * @return list<array{id: int, title: string, url: string, post_type: string, post_type_label: string}>
+	 * @return list<array{id: int, title: string, url: string, post_type: string, post_type_label: string, is_public: bool}>
 	 */
 	public static function get_sources( $post_id ) {
 		$used_in_posts = get_post_meta( (int) $post_id, 'used_in_posts', true );
@@ -111,12 +149,19 @@ class Registry_Content {
 				? (string) $type_object->labels->singular_name
 				: $source_post->post_type;
 
+			// Internal (non-public) types have no working front URL: editor preview only, no link.
+			$is_public = $type_object && ! empty( $type_object->public );
+			if ( ! $is_public && ! ( self::is_editor_preview() && current_user_can( 'edit_post', $source_id ) ) ) {
+				continue;
+			}
+
 			$sources[] = [
 				'id'              => $source_id,
 				'title'           => $title,
-				'url'             => $url,
+				'url'             => $is_public ? $url : '',
 				'post_type'       => $source_post->post_type,
 				'post_type_label' => $type_label,
+				'is_public'       => $is_public,
 			];
 			$seen_url[ $url ] = true;
 		}
@@ -142,6 +187,7 @@ class Registry_Content {
 					'url'             => $url,
 					'post_type'       => (string) ( $row['post_type'] ?? '' ),
 					'post_type_label' => (string) ( $row['post_type_label'] ?? '' ),
+					'is_public'       => true,
 				];
 			}
 		}

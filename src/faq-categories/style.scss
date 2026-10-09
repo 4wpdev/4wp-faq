@@ -12,19 +12,63 @@
 	opacity: 0.7;
 }
 
+.forwp-faq-categories__menu {
+	display: none;
+	align-items: center;
+	gap: 0.5rem;
+	width: 100%;
+	margin: 0 0 0.75rem;
+	padding: 0.6rem 0.75rem;
+	border: 1px solid currentColor;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	line-height: 1.2;
+	text-align: left;
+	cursor: pointer;
+}
+
+.forwp-faq-categories__menu-icon {
+	display: block;
+	flex: 0 0 auto;
+}
+
 .forwp-faq-categories__list {
 	display: flex;
 	flex-direction: column;
-	gap: 0;
+	gap: var(--forwp-faq-item-gap, 0);
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
 
+@media (max-width: 781px) {
+	.forwp-faq-categories__menu {
+		display: flex;
+	}
+
+	.forwp-faq-categories__list {
+		display: none;
+	}
+
+	.forwp-faq-categories.is-menu-open .forwp-faq-categories__list {
+		display: flex;
+		flex-direction: column;
+	}
+}
+
 .forwp-faq-categories.is-orientation-horizontal .forwp-faq-categories__list {
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 0.35rem;
+	gap: var(--forwp-faq-item-gap, 0.35rem);
+}
+
+.forwp-faq-categories__item.is-all .forwp-faq-categories__term {
+	font-size: var(--forwp-faq-all-size, inherit);
+}
+
+.forwp-faq-categories__item:not(.is-all) .forwp-faq-categories__term {
+	font-size: var(--forwp-faq-item-size, inherit);
 }
 
 .forwp-faq-categories.is-collapsible .forwp-faq-categories__item {

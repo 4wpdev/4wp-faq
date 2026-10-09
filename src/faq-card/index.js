@@ -3,7 +3,10 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { PanelBody, RadioControl, TextControl, ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-import { FaqTypographyPanel } from '../display/typography-panels';
+import {
+	FaqTypographyPanel,
+	typographyStyleVars,
+} from '../display/typography-panels';
 
 import './style.scss';
 
@@ -13,6 +16,7 @@ registerBlockType( 'forwp/faq-card', {
 			displayMode = 'accordion',
 			showSources = false,
 			sourcesLabel = __( 'Used in', '4wp-faq' ),
+			sourcesSeparator = ', ',
 			showPostType = false,
 			questionStyle = {},
 			answerStyle = {},
@@ -20,30 +24,8 @@ registerBlockType( 'forwp/faq-card', {
 		const blockProps = useBlockProps( {
 			className: `forwp-faq-card-editor is-display-${ displayMode }`,
 			style: {
-				...( questionStyle?.fontSize
-					? { '--forwp-faq-q-size': questionStyle.fontSize }
-					: {} ),
-				...( questionStyle?.fontFamily
-					? { '--forwp-faq-q-family': questionStyle.fontFamily }
-					: {} ),
-				...( questionStyle?.fontWeight
-					? { '--forwp-faq-q-weight': questionStyle.fontWeight }
-					: {} ),
-				...( questionStyle?.color
-					? { '--forwp-faq-q-color': questionStyle.color }
-					: {} ),
-				...( answerStyle?.fontSize
-					? { '--forwp-faq-a-size': answerStyle.fontSize }
-					: {} ),
-				...( answerStyle?.fontFamily
-					? { '--forwp-faq-a-family': answerStyle.fontFamily }
-					: {} ),
-				...( answerStyle?.fontWeight
-					? { '--forwp-faq-a-weight': answerStyle.fontWeight }
-					: {} ),
-				...( answerStyle?.color
-					? { '--forwp-faq-a-color': answerStyle.color }
-					: {} ),
+				...typographyStyleVars( 'q', questionStyle ),
+				...typographyStyleVars( 'a', answerStyle ),
 			},
 		} );
 
@@ -91,6 +73,17 @@ registerBlockType( 'forwp/faq-card', {
 										setAttributes( { sourcesLabel: value } )
 									}
 								/>
+								<TextControl
+									label={ __( 'Separator', '4wp-faq' ) }
+									help={ __(
+										'Enter character(s) used to separate source links.',
+										'4wp-faq'
+									) }
+									value={ sourcesSeparator }
+									onChange={ ( value ) =>
+										setAttributes( { sourcesSeparator: value } )
+									}
+								/>
 								<ToggleControl
 									label={ __( 'Show CPT type', '4wp-faq' ) }
 									help={ __(
@@ -110,10 +103,6 @@ registerBlockType( 'forwp/faq-card', {
 					<FaqTypographyPanel
 						panelId="forwp-faq-card-question-style"
 						title={ __( 'Question', '4wp-faq' ) }
-						help={ __(
-							'Empty values inherit from the theme or parent block.',
-							'4wp-faq'
-						) }
 						value={ questionStyle }
 						onChange={ ( next ) =>
 							setAttributes( { questionStyle: next } )
@@ -122,10 +111,6 @@ registerBlockType( 'forwp/faq-card', {
 					<FaqTypographyPanel
 						panelId="forwp-faq-card-answer-style"
 						title={ __( 'Answer', '4wp-faq' ) }
-						help={ __(
-							'Empty values inherit from the theme or parent block.',
-							'4wp-faq'
-						) }
 						value={ answerStyle }
 						onChange={ ( next ) =>
 							setAttributes( { answerStyle: next } )
@@ -153,10 +138,14 @@ registerBlockType( 'forwp/faq-card', {
 				) }
 				{ showSources ? (
 					<p className="forwp-faq-card-editor__sources">
-						{ sourcesLabel }
-						{ showPostType
-							? ( sourcesLabel ? ' · ' : '' ) + __( 'CPT type', '4wp-faq' )
-							: '' }
+						{ sourcesLabel ? `${ sourcesLabel }: ` : '' }
+						{ [ __( 'Page', '4wp-faq' ), __( 'Post', '4wp-faq' ) ]
+							.map( ( item ) =>
+								showPostType
+									? `${ item } (${ __( 'CPT type', '4wp-faq' ) })`
+									: item
+							)
+							.join( sourcesSeparator ) }
 					</p>
 				) : null }
 			</div>

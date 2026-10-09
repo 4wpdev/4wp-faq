@@ -4,7 +4,7 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.2
+Stable tag: 2.6.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -223,6 +223,14 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 
 == Changelog ==
 
+= 2.6.3 =
+* **Typography:** List, Card, and Categories panels match core (size, appearance, line height, letter spacing, decoration, letter case).
+* **Used in:** sources stay on one line with a separator. Non-public sources are hidden on the front; the editor preview shows them greyed.
+* **Count:** the badge is the sum of the categories on All, or that category’s count on a category page. The number and the label stay on one line.
+* **No results:** an empty search shows a message you can edit, the same way as Query Loop no-results.
+* **Dashboard:** figures follow the Polylang admin language and name it. All languages adds a per-language breakdown. Reused counts public pages only.
+* **Editor preview:** List and Categories follow the page language, and Exclude hides that category.
+
 = 2.6.2 =
 * **Editor:** List, Categories, and Count previews load with POST, so the editor no longer shows “Error loading block: [object Object]”.
 * **Answers:** color classes copied from dark sections (such as `has-white-50-color`) are stripped on output, so answer text uses the card color.
@@ -295,6 +303,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.6.3 =
+Typography matches core, Used in stays on one line, the count matches the categories on the page, empty search has an editable message, and the dashboard follows the admin language.
 
 = 2.6.2 =
 Editor previews load again, FAQ answers no longer keep a forced light color, Settings opens from Overview blocks, and the FAQ Dashboard shows large figures plus a widget on the main WordPress Dashboard.

@@ -3,17 +3,21 @@
  */
 
 import {
-	FontSizePicker,
+	LineHeightControl,
 	__experimentalColorGradientSettingsDropdown as ColorGradientSettingsDropdown,
 	__experimentalFontAppearanceControl as FontAppearanceControl,
 	__experimentalFontFamilyControl as FontFamilyControl,
+	__experimentalLetterSpacingControl as LetterSpacingControl,
+	__experimentalTextDecorationControl as TextDecorationControl,
+	__experimentalTextTransformControl as TextTransformControl,
 	__experimentalUseMultipleOriginColorsAndGradients as useMultipleOriginColorsAndGradients,
 } from '@wordpress/block-editor';
 import {
-	SelectControl,
+	FontSizePicker,
 	__experimentalToolsPanel as ToolsPanel,
 	__experimentalToolsPanelItem as ToolsPanelItem,
 } from '@wordpress/components';
+import { useViewportMatch } from '@wordpress/compose';
 import { useSelect } from '@wordpress/data';
 import { __ } from '@wordpress/i18n';
 
@@ -102,10 +106,47 @@ export const normalizeColor = ( value ) => {
 };
 
 const EMPTY_STYLE = {
-	fontSize: '',
-	fontFamily: '',
-	fontWeight: '',
 	color: '',
+	fontFamily: '',
+	fontSize: '',
+	fontStyle: '',
+	fontWeight: '',
+	lineHeight: '',
+	letterSpacing: '',
+	textDecoration: '',
+	textTransform: '',
+};
+
+const STYLE_VAR_SUFFIX = {
+	fontSize: 'size',
+	fontFamily: 'family',
+	fontWeight: 'weight',
+	fontStyle: 'style',
+	lineHeight: 'line',
+	letterSpacing: 'spacing',
+	textDecoration: 'decoration',
+	textTransform: 'transform',
+	color: 'color',
+};
+
+/**
+ * CSS custom properties for one style object (mirrors PHP output).
+ *
+ * @param {string} prefix `q`, `a` or `g`.
+ * @param {Object} style  Style attribute value.
+ * @return {Object} Inline style map.
+ */
+export const typographyStyleVars = ( prefix, style ) => {
+	const vars = {};
+	if ( ! style || typeof style !== 'object' ) {
+		return vars;
+	}
+	Object.entries( STYLE_VAR_SUFFIX ).forEach( ( [ key, suffix ] ) => {
+		if ( style[ key ] ) {
+			vars[ `--forwp-faq-${ prefix }-${ suffix }` ] = style[ key ];
+		}
+	} );
+	return vars;
 };
 
 /**
@@ -113,7 +154,7 @@ const EMPTY_STYLE = {
  *
  * @return {{ fontSizes: Array|undefined, fontFamilies: Array }}
  */
-const useEditorTypography = () =>
+export const useEditorTypography = () =>
 	useSelect( ( select ) => {
 		const settings = select( 'core/block-editor' )?.getSettings?.() || {};
 		const features = settings.__experimentalFeatures || {};
@@ -133,8 +174,17 @@ const useEditorTypography = () =>
 	}, [] );
 
 /**
- * Stable empty payload when the experimental colors hook is missing.
+ * Same popover placement as the core block inspector panels.
+ *
+ * @return {Object}
  */
+export const useFaqDropdownMenuProps = () => {
+	const isMobile = useViewportMatch( 'medium', '<' );
+	return isMobile
+		? {}
+		: { popoverProps: { placement: 'left-start', offset: 259 } };
+};
+
 const EMPTY_COLOR_GRADIENT_SETTINGS = {
 	colors: [],
 	gradients: [],
@@ -144,207 +194,175 @@ const EMPTY_COLOR_GRADIENT_SETTINGS = {
 };
 
 /**
+ * Core-style Typography ToolsPanel for one FAQ text part.
+ *
  * @param {Object}   props
- * @param {Object}   props.value     Current style attrs for one side.
- * @param {Function} props.onChange  Receive full style object.
- * @param {string}   props.title     ToolsPanel label.
- * @param {string}   props.panelId   Unique ToolsPanel id.
- * @param {string}   props.help      Optional help under the panel.
+ * @param {Object}   props.value    Current style attrs.
+ * @param {Function} props.onChange Receive full style object.
+ * @param {string}   props.title    ToolsPanel label.
+ * @param {string}   props.panelId  Unique ToolsPanel id.
  */
-export function FaqTypographyPanel( {
-	value = {},
-	onChange,
-	title,
-	panelId,
-	help = '',
-} ) {
+export function FaqTypographyPanel( { value = {}, onChange, title, panelId } ) {
 	const { fontSizes, fontFamilies } = useEditorTypography();
-	// Call only when present; presence is stable for a given WP version.
+	const dropdownMenuProps = useFaqDropdownMenuProps();
 	const colorGradientSettings =
 		( typeof useMultipleOriginColorsAndGradients === 'function'
 			? useMultipleOriginColorsAndGradients()
 			: null ) || EMPTY_COLOR_GRADIENT_SETTINGS;
 
-	const safeValue = value && typeof value === 'object' ? value : {};
-	const fontSize = safeValue.fontSize || '';
-	const fontFamily = safeValue.fontFamily || '';
-	const fontWeight = safeValue.fontWeight || '';
-	const color = safeValue.color || '';
-
-	const patch = ( next ) => onChange( { ...safeValue, ...next } );
-	const resetAll = () => onChange( { ...EMPTY_STYLE } );
-
-	const hasFont = () => !! fontFamily;
-	const hasSize = () => !! fontSize;
-	const hasWeight = () => !! fontWeight;
-	const hasColor = () => !! color;
+	const style = value && typeof value === 'object' ? value : {};
+	const patch = ( next ) => onChange( { ...style, ...next } );
+	const has = ( key ) => () => !! style[ key ];
+	const clear = ( ...keys ) => () =>
+		patch( Object.fromEntries( keys.map( ( key ) => [ key, '' ] ) ) );
 
 	return (
-		<>
-			{ help ? (
-				<p className="forwp-faq-typography-help">{ help }</p>
-			) : null }
-			<ToolsPanel
-				label={ title }
-				resetAll={ resetAll }
+		<ToolsPanel
+			label={ title }
+			resetAll={ () => onChange( { ...EMPTY_STYLE } ) }
+			panelId={ panelId }
+			__experimentalFirstVisibleItemClass="first"
+			dropdownMenuProps={ dropdownMenuProps }
+		>
+			<ColorGradientSettingsDropdown
+				__experimentalIsRenderedInSidebar
+				settings={ [
+					{
+						colorValue: style.color || undefined,
+						label: __( 'Color', '4wp-faq' ),
+						onColorChange: ( next ) =>
+							patch( { color: normalizeColor( next ) } ),
+						isShownByDefault: true,
+						resetAllFilter: () => patch( { color: '' } ),
+						hasValue: has( 'color' ),
+						onDeselect: clear( 'color' ),
+					},
+				] }
 				panelId={ panelId }
-				hasInnerWrapper
-			>
-				{ ColorGradientSettingsDropdown ? (
-					<ColorGradientSettingsDropdown
-						__experimentalIsRenderedInSidebar
-						settings={ [
-							{
-								colorValue: color || undefined,
-								label: __( 'Color', '4wp-faq' ),
-								onColorChange: ( next ) =>
-									patch( { color: normalizeColor( next ) } ),
-								isShownByDefault: true,
-								resetAllFilter: () => patch( { color: '' } ),
-								hasValue: hasColor,
-								onDeselect: () => patch( { color: '' } ),
-							},
-						] }
-						panelId={ panelId }
-						{ ...colorGradientSettings }
-					/>
-				) : null }
+				{ ...colorGradientSettings }
+			/>
 
-				{ fontFamilies.length > 0 && FontFamilyControl ? (
-					<ToolsPanelItem
-						hasValue={ hasFont }
-						label={ __( 'Font', '4wp-faq' ) }
-						onDeselect={ () => patch( { fontFamily: '' } ) }
-						isShownByDefault
-						panelId={ panelId }
-					>
-						<FontFamilyControl
-							fontFamilies={ fontFamilies }
-							value={ fontFamily }
-							onChange={ ( next ) =>
-								patch( { fontFamily: next || '' } )
-							}
-							size="__unstable-large"
-							__nextHasNoMarginBottom
-						/>
-					</ToolsPanelItem>
-				) : fontFamilies.length > 0 ? (
-					<ToolsPanelItem
-						hasValue={ hasFont }
-						label={ __( 'Font', '4wp-faq' ) }
-						onDeselect={ () => patch( { fontFamily: '' } ) }
-						isShownByDefault
-						panelId={ panelId }
-					>
-						<SelectControl
-							label={ __( 'Font', '4wp-faq' ) }
-							hideLabelFromVision
-							value={ fontFamily }
-							options={ [
-								{
-									label: __( 'Default', '4wp-faq' ),
-									value: '',
-								},
-								...fontFamilies.map( ( family ) => ( {
-									label: family.name,
-									value: family.fontFamily,
-								} ) ),
-							] }
-							onChange={ ( next ) =>
-								patch( { fontFamily: next || '' } )
-							}
-							__next40pxDefaultSize
-							__nextHasNoMarginBottom
-						/>
-					</ToolsPanelItem>
-				) : null }
-
+			{ fontFamilies.length > 0 ? (
 				<ToolsPanelItem
-					hasValue={ hasSize }
-					label={ __( 'Size', '4wp-faq' ) }
-					onDeselect={ () => patch( { fontSize: '' } ) }
+					label={ __( 'Font', '4wp-faq' ) }
+					hasValue={ has( 'fontFamily' ) }
+					onDeselect={ clear( 'fontFamily' ) }
 					isShownByDefault
 					panelId={ panelId }
 				>
-					<FontSizePicker
-						fontSizes={ fontSizes }
-						value={ fontSize || undefined }
-						onChange={ ( next ) =>
-							patch( { fontSize: normalizeFontSize( next ) } )
-						}
-						withReset={ false }
-						size="__unstable-large"
-						__next40pxDefaultSize
+					<FontFamilyControl
+						fontFamilies={ fontFamilies }
+						value={ style.fontFamily || '' }
+						onChange={ ( next ) => patch( { fontFamily: next || '' } ) }
 					/>
 				</ToolsPanelItem>
+			) : null }
 
-				{ FontAppearanceControl ? (
-					<ToolsPanelItem
-						hasValue={ hasWeight }
-						label={ __( 'Appearance', '4wp-faq' ) }
-						onDeselect={ () => patch( { fontWeight: '' } ) }
-						isShownByDefault
-						panelId={ panelId }
-					>
-						<FontAppearanceControl
-							value={ {
-								fontStyle: 'normal',
-								fontWeight: fontWeight || undefined,
-							} }
-							onChange={ ( next ) =>
-								patch( {
-									fontWeight: next?.fontWeight
-										? String( next.fontWeight )
-										: '',
-								} )
-							}
-							hasFontStyles={ false }
-							hasFontWeights
-						/>
-					</ToolsPanelItem>
-				) : (
-					<ToolsPanelItem
-						hasValue={ hasWeight }
-						label={ __( 'Appearance', '4wp-faq' ) }
-						onDeselect={ () => patch( { fontWeight: '' } ) }
-						isShownByDefault
-						panelId={ panelId }
-					>
-						<SelectControl
-							label={ __( 'Weight', '4wp-faq' ) }
-							hideLabelFromVision
-							value={ fontWeight }
-							options={ [
-								{
-									label: __( 'Default', '4wp-faq' ),
-									value: '',
-								},
-								{
-									label: __( 'Normal', '4wp-faq' ),
-									value: '400',
-								},
-								{
-									label: __( 'Medium', '4wp-faq' ),
-									value: '500',
-								},
-								{
-									label: __( 'Semibold', '4wp-faq' ),
-									value: '600',
-								},
-								{
-									label: __( 'Bold', '4wp-faq' ),
-									value: '700',
-								},
-							] }
-							onChange={ ( next ) =>
-								patch( { fontWeight: next || '' } )
-							}
-							__next40pxDefaultSize
-							__nextHasNoMarginBottom
-						/>
-					</ToolsPanelItem>
-				) }
-			</ToolsPanel>
-		</>
+			<ToolsPanelItem
+				label={ __( 'Size', '4wp-faq' ) }
+				hasValue={ has( 'fontSize' ) }
+				onDeselect={ clear( 'fontSize' ) }
+				isShownByDefault
+				panelId={ panelId }
+			>
+				<FontSizePicker
+					fontSizes={ fontSizes }
+					value={ style.fontSize || undefined }
+					onChange={ ( next ) =>
+						patch( { fontSize: normalizeFontSize( next ) } )
+					}
+					withReset={ false }
+					withSlider
+				/>
+			</ToolsPanelItem>
+
+			<ToolsPanelItem
+				label={ __( 'Appearance', '4wp-faq' ) }
+				hasValue={ () => !! style.fontWeight || !! style.fontStyle }
+				onDeselect={ clear( 'fontWeight', 'fontStyle' ) }
+				isShownByDefault
+				panelId={ panelId }
+			>
+				<FontAppearanceControl
+					value={ {
+						fontStyle: style.fontStyle || undefined,
+						fontWeight: style.fontWeight || undefined,
+					} }
+					onChange={ ( next ) =>
+						patch( {
+							fontStyle: next?.fontStyle ? String( next.fontStyle ) : '',
+							fontWeight: next?.fontWeight ? String( next.fontWeight ) : '',
+						} )
+					}
+					hasFontStyles
+					hasFontWeights
+				/>
+			</ToolsPanelItem>
+
+			<ToolsPanelItem
+				className="single-column"
+				label={ __( 'Line height', '4wp-faq' ) }
+				hasValue={ has( 'lineHeight' ) }
+				onDeselect={ clear( 'lineHeight' ) }
+				isShownByDefault
+				panelId={ panelId }
+			>
+				<LineHeightControl
+					__unstableInputWidth="auto"
+					value={ style.lineHeight || undefined }
+					onChange={ ( next ) =>
+						patch( { lineHeight: next ? String( next ) : '' } )
+					}
+				/>
+			</ToolsPanelItem>
+
+			<ToolsPanelItem
+				className="single-column"
+				label={ __( 'Letter spacing', '4wp-faq' ) }
+				hasValue={ has( 'letterSpacing' ) }
+				onDeselect={ clear( 'letterSpacing' ) }
+				isShownByDefault
+				panelId={ panelId }
+			>
+				<LetterSpacingControl
+					__unstableInputWidth="auto"
+					value={ style.letterSpacing || undefined }
+					onChange={ ( next ) =>
+						patch( { letterSpacing: next || '' } )
+					}
+				/>
+			</ToolsPanelItem>
+
+			<ToolsPanelItem
+				label={ __( 'Decoration', '4wp-faq' ) }
+				hasValue={ has( 'textDecoration' ) }
+				onDeselect={ clear( 'textDecoration' ) }
+				isShownByDefault
+				panelId={ panelId }
+			>
+				<TextDecorationControl
+					value={ style.textDecoration || undefined }
+					onChange={ ( next ) =>
+						patch( { textDecoration: next || '' } )
+					}
+				/>
+			</ToolsPanelItem>
+
+			<ToolsPanelItem
+				label={ __( 'Letter case', '4wp-faq' ) }
+				hasValue={ has( 'textTransform' ) }
+				onDeselect={ clear( 'textTransform' ) }
+				isShownByDefault
+				panelId={ panelId }
+			>
+				<TextTransformControl
+					value={ style.textTransform || undefined }
+					onChange={ ( next ) =>
+						patch( { textTransform: next || '' } )
+					}
+				/>
+			</ToolsPanelItem>
+		</ToolsPanel>
 	);
 }
+

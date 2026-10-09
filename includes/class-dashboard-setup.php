@@ -112,6 +112,8 @@ class Dashboard_Setup {
 			],
 		];
 
+		Admin_Dashboard::render_language_note( $data );
+
 		echo '<ul class="forwp-faq-status-list">';
 		foreach ( $rows as $row ) {
 			echo '<li class="' . esc_attr( $row['class'] ) . '">';

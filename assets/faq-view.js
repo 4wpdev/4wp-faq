@@ -66,6 +66,17 @@ const countVisibleCards = () => {
 	return n;
 };
 
+// Without a search the badge shows the category nav totals, not the cards on screen (preview limit).
+const currentCount = () => {
+	if ( ! String( state.search || '' ).trim() ) {
+		const total = state.totals?.[ state.category || '' ];
+		if ( typeof total === 'number' ) {
+			return total;
+		}
+	}
+	return countVisibleCards();
+};
+
 const { state } = store( 'forwp/faq', {
 	state: {
 		openBranches: readOpenBranches(),
@@ -93,16 +104,32 @@ const { state } = store( 'forwp/faq', {
 		get isBranchHidden() {
 			return ! state.isBranchOpen;
 		},
+		get isMenuOpen() {
+			return !! state.menuOpen;
+		},
+		get hasNoResults() {
+			return (
+				!! String( state.search || '' ).trim() && state.visibleCount === 0
+			);
+		},
 		get isGroupVisible() {
 			const ctx = getContext() || {};
-			if ( ! state.category ) {
-				return true;
+			if ( state.category ) {
+				const ancestors = ( ctx.ancestors || '' )
+					.split( /\s+/ )
+					.filter( Boolean );
+				if (
+					( ctx.slug || '' ) !== state.category &&
+					ancestors.indexOf( state.category ) === -1
+				) {
+					return false;
+				}
 			}
-			if ( ( ctx.slug || '' ) === state.category ) {
-				return true;
+			const query = ( state.search || '' ).trim().toLowerCase();
+			if ( query && ( ctx.searchText || '' ).indexOf( query ) === -1 ) {
+				return false;
 			}
-			const ancestors = ( ctx.ancestors || '' ).split( /\s+/ ).filter( Boolean );
-			return ancestors.indexOf( state.category ) !== -1;
+			return true;
 		},
 		get isItemVisible() {
 			const ctx = getContext() || {};
@@ -118,6 +145,12 @@ const { state } = store( 'forwp/faq', {
 		},
 	},
 	actions: {
+		toggleMenu( event ) {
+			if ( event && typeof event.preventDefault === 'function' ) {
+				event.preventDefault();
+			}
+			state.menuOpen = ! state.menuOpen;
+		},
 		toggleBranch: withSyncEvent( ( event ) => {
 			if ( event && typeof event.preventDefault === 'function' ) {
 				event.preventDefault();
@@ -150,7 +183,7 @@ const { state } = store( 'forwp/faq', {
 			}
 			state.category = ctx.slug || '';
 			window.requestAnimationFrame( () => {
-				state.visibleCount = countVisibleCards();
+				state.visibleCount = currentCount();
 			} );
 		},
 		setSearch( event ) {
@@ -158,7 +191,7 @@ const { state } = store( 'forwp/faq', {
 			state.search =
 				target && typeof target.value === 'string' ? target.value : '';
 			window.requestAnimationFrame( () => {
-				state.visibleCount = countVisibleCards();
+				state.visibleCount = currentCount();
 			} );
 		},
 		preventSearchSubmit( event ) {
@@ -181,10 +214,10 @@ if ( typeof state.search !== 'string' ) {
 }
 
 if ( typeof state.visibleCount !== 'number' ) {
-	state.visibleCount = countVisibleCards();
+	state.visibleCount = currentCount();
 }
 
 window.addEventListener( 'popstate', () => {
 	state.category = categoryFromLocation();
-	state.visibleCount = countVisibleCards();
+	state.visibleCount = currentCount();
 } );

@@ -56,6 +56,18 @@
 			"items": {
 				"type": "number"
 			}
+		},
+		"allItemFontSize": {
+			"type": "string",
+			"default": ""
+		},
+		"itemFontSize": {
+			"type": "string",
+			"default": ""
+		},
+		"itemGap": {
+			"type": "string",
+			"default": ""
 		}
 	},
 	"example": {

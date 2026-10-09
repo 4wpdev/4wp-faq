@@ -29,6 +29,10 @@
 			"type": "string",
 			"default": "Used in"
 		},
+		"sourcesSeparator": {
+			"type": "string",
+			"default": ", "
+		},
 		"showPostType": {
 			"type": "boolean",
 			"default": false

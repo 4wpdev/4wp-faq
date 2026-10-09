@@ -23,7 +23,41 @@ import { FaqTypographyPanel } from '../display/typography-panels';
 
 import './style.scss';
 
-const TEMPLATE = [ [ 'forwp/faq-card', {} ] ];
+const TEMPLATE = [
+	[ 'forwp/faq-card', {} ],
+	[
+		'forwp/faq-no-results',
+		{},
+		[
+			[
+				'core/paragraph',
+				{
+					content: __(
+						'No questions found. Try another search.',
+						'4wp-faq'
+					),
+				},
+			],
+		],
+	],
+];
+
+registerBlockType( 'forwp/faq-no-results', {
+	edit: () => {
+		const blockProps = useBlockProps( {
+			className: 'forwp-faq-no-results-editor',
+		} );
+		return (
+			<div { ...blockProps }>
+				<p className="forwp-faq-list-editor__hint">
+					{ __( 'Shown when the search finds no questions.', '4wp-faq' ) }
+				</p>
+				<InnerBlocks templateLock={ false } />
+			</div>
+		);
+	},
+	save: () => <InnerBlocks.Content />,
+} );
 
 const styleEqual = ( a, b ) =>
 	JSON.stringify( a && typeof a === 'object' ? a : {} ) ===
@@ -41,6 +75,11 @@ const useRegistryCategories = () => {
 	const registryReady = !! config.registrySetupComplete;
 	const categoriesPath =
 		config.categoriesPath || '/forwp-faq/v1/editor/categories';
+	const postId = useSelect(
+		( select ) => select( 'core/editor' )?.getCurrentPostId?.(),
+		[]
+	);
+	const query = typeof postId === 'number' && postId > 0 ? `?post_id=${ postId }` : '';
 
 	useEffect( () => {
 		if ( ! registryReady ) {
@@ -51,7 +90,7 @@ const useRegistryCategories = () => {
 		let cancelled = false;
 		setLoading( true );
 
-		apiFetch( { path: categoriesPath } )
+		apiFetch( { path: `${ categoriesPath }${ query }` } )
 			.then( ( response ) => {
 				if ( ! cancelled ) {
 					setTerms( Array.isArray( response?.terms ) ? response.terms : [] );
@@ -71,7 +110,7 @@ const useRegistryCategories = () => {
 		return () => {
 			cancelled = true;
 		};
-	}, [ registryReady, categoriesPath ] );
+	}, [ registryReady, categoriesPath, query ] );
 
 	return { terms, loading, registryReady };
 };
@@ -95,9 +134,11 @@ registerBlockType( 'forwp/faq-list', {
 			cardDisplayMode = 'accordion',
 			cardShowSources = false,
 			cardSourcesLabel = 'Used in',
+			cardSourcesSeparator = ', ',
 			cardShowPostType = false,
 			cardQuestionStyle = {},
 			cardAnswerStyle = {},
+			groupTitleStyle = {},
 		} = attributes;
 		const { terms, loading, registryReady } = useRegistryCategories();
 		useSyncCategoryFilters( clientId, includeTermIds, excludeTermIds );
@@ -129,6 +170,10 @@ registerBlockType( 'forwp/faq-list', {
 				typeof innerCard.attributes?.sourcesLabel === 'string'
 					? innerCard.attributes.sourcesLabel
 					: 'Used in';
+			const nextSeparator =
+				typeof innerCard.attributes?.sourcesSeparator === 'string'
+					? innerCard.attributes.sourcesSeparator
+					: ', ';
 			const nextPostType = !! innerCard.attributes?.showPostType;
 			const nextQuestion =
 				innerCard.attributes?.questionStyle &&
@@ -145,6 +190,7 @@ registerBlockType( 'forwp/faq-list', {
 				nextMode !== cardDisplayMode ||
 				nextSources !== cardShowSources ||
 				nextLabel !== cardSourcesLabel ||
+				nextSeparator !== cardSourcesSeparator ||
 				nextPostType !== cardShowPostType ||
 				! styleEqual( nextQuestion, cardQuestionStyle ) ||
 				! styleEqual( nextAnswer, cardAnswerStyle )
@@ -153,6 +199,7 @@ registerBlockType( 'forwp/faq-list', {
 					cardDisplayMode: nextMode,
 					cardShowSources: nextSources,
 					cardSourcesLabel: nextLabel,
+					cardSourcesSeparator: nextSeparator,
 					cardShowPostType: nextPostType,
 					cardQuestionStyle: nextQuestion,
 					cardAnswerStyle: nextAnswer,
@@ -162,12 +209,14 @@ registerBlockType( 'forwp/faq-list', {
 			innerCard?.attributes?.displayMode,
 			innerCard?.attributes?.showSources,
 			innerCard?.attributes?.sourcesLabel,
+			innerCard?.attributes?.sourcesSeparator,
 			innerCard?.attributes?.showPostType,
 			innerCard?.attributes?.questionStyle,
 			innerCard?.attributes?.answerStyle,
 			cardDisplayMode,
 			cardShowSources,
 			cardSourcesLabel,
+			cardSourcesSeparator,
 			cardShowPostType,
 			cardQuestionStyle,
 			cardAnswerStyle,
@@ -197,6 +246,9 @@ registerBlockType( 'forwp/faq-list', {
 			}
 			if ( Object.prototype.hasOwnProperty.call( patch, 'sourcesLabel' ) ) {
 				listPatch.cardSourcesLabel = patch.sourcesLabel;
+			}
+			if ( Object.prototype.hasOwnProperty.call( patch, 'sourcesSeparator' ) ) {
+				listPatch.cardSourcesSeparator = patch.sourcesSeparator;
 			}
 			if ( Object.prototype.hasOwnProperty.call( patch, 'showPostType' ) ) {
 				listPatch.cardShowPostType = patch.showPostType;
@@ -276,12 +328,16 @@ registerBlockType( 'forwp/faq-list', {
 				</InspectorControls>
 				<InspectorControls group="styles">
 					<FaqTypographyPanel
+						panelId="forwp-faq-list-group-title-style"
+						title={ __( 'Category title', '4wp-faq' ) }
+						value={ groupTitleStyle }
+						onChange={ ( next ) =>
+							setAttributes( { groupTitleStyle: next } )
+						}
+					/>
+					<FaqTypographyPanel
 						panelId="forwp-faq-list-question-style"
 						title={ __( 'Question', '4wp-faq' ) }
-						help={ __(
-							'Empty values inherit from the theme or parent Group/Column.',
-							'4wp-faq'
-						) }
 						value={
 							innerCard?.attributes?.questionStyle || cardQuestionStyle || {}
 						}
@@ -292,10 +348,6 @@ registerBlockType( 'forwp/faq-list', {
 					<FaqTypographyPanel
 						panelId="forwp-faq-list-answer-style"
 						title={ __( 'Answer', '4wp-faq' ) }
-						help={ __(
-							'Empty values inherit from the theme or parent Group/Column.',
-							'4wp-faq'
-						) }
 						value={
 							innerCard?.attributes?.answerStyle || cardAnswerStyle || {}
 						}
@@ -312,7 +364,7 @@ registerBlockType( 'forwp/faq-list', {
 						) }
 					</p>
 					<InnerBlocks
-						allowedBlocks={ [ 'forwp/faq-card' ] }
+						allowedBlocks={ [ 'forwp/faq-card', 'forwp/faq-no-results' ] }
 						template={ TEMPLATE }
 						templateLock="all"
 					/>
