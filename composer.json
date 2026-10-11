@@ -1,0 +1,10 @@
+{
+  "name": "4wpdev/4wp-faq",
+  "description": "FAQ wrapper for core Accordion: JSON-LD, optional registry you can edit or add from (writes back onto pages), hub blocks, usage context. Site content stays the source of truth.",
+  "type": "wordpress-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=7.4",
+    "composer/installers": "^2.0"
+  }
+}
