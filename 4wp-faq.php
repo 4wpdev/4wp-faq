@@ -3,7 +3,7 @@
  * Plugin Name: 4WP FAQ
  * Plugin URI:        https://github.com/4wpdev/4wp-faq
  * Description: FAQ wrapper for core Accordion: JSON-LD, optional registry you can edit or add from (writes back onto pages), hub blocks, usage context. Site content stays the source of truth.
- * Version:           2.6.3
+ * Version:           2.6.4
  * Requires at least: 6.6
  * Requires PHP:      7.4
  * Author:            4WP Team
@@ -19,7 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'FORWP_FAQ_VERSION', '2.6.3' );
+define( 'FORWP_FAQ_VERSION', '2.6.4' );
 define( 'FORWP_FAQ_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'FORWP_FAQ_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 

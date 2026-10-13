@@ -4,7 +4,7 @@ Tags: faq, accordion, json-ld, gutenberg, seo
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.3
+Stable tag: 2.6.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -223,6 +223,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 
 == Changelog ==
 
+= 2.6.4 =
+* **Hub filter:** the host page slug (e.g. `/4wp-faq/`) no longer activates a FAQ category with the same slug. Pretty category URLs still match the full nav path (`/4wp-faq/hooks/`). Accordion FAQ on the page is unchanged; List / Categories keep their own settings.
+
 = 2.6.3 =
 * **Typography:** List, Card, and Categories panels match core (size, appearance, line height, letter spacing, decoration, letter case).
 * **Used in:** sources stay on one line with a separator. Non-public sources are hidden on the front; the editor preview shows them greyed.
@@ -303,6 +306,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.6.4 =
+Hub List no longer disappears when the page slug matches a FAQ category. Category pretty URLs still filter correctly.
 
 = 2.6.3 =
 Typography matches core, Used in stays on one line, the count matches the categories on the page, empty search has an editable message, and the dashboard follows the admin language.

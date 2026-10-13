@@ -18,6 +18,10 @@ A plugin by **[4WP](https://4wp.dev/)** · Source: **[github.com/4wpdev/4wp-faq]
 
 JSON-LD works **without** the registry. The registry is a helper: scan unique questions, edit one record to push Q/A onto every **Used In** page, or **Add FAQ** onto category pages / one page. Accordion items on the site stay the source of truth.
 
+## Version 2.6.4
+
+- **Hub filter:** a page whose slug matches a FAQ category (e.g. `/4wp-faq/`) no longer filters the List to that category. Pretty URLs still use the full path (`/page/term-slug/`). Accordion FAQ on the page is separate; hub blocks follow their own settings.
+
 ## Version 2.6.3
 
 - **Typography:** List, Card, and Categories panels match core (size, appearance, line height, letter spacing, decoration, letter case).

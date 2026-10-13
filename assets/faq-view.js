@@ -29,6 +29,14 @@ const writeOpenBranches = ( map ) => {
 	}
 };
 
+const normalizePath = ( path ) =>
+	( path || '' ).replace( /\/+$/, '' ) || '/';
+
+/**
+ * Category from ?faq_cat= or a pretty /hub/term-slug/ URL.
+ * Match the full nav href path — never the host page slug alone
+ * (e.g. /4wp-faq/ must not activate category "4wp-faq").
+ */
 const categoryFromLocation = () => {
 	const params = new URLSearchParams( window.location.search || '' );
 	const fromQuery = ( params.get( 'faq_cat' ) || '' ).trim();
@@ -36,20 +44,29 @@ const categoryFromLocation = () => {
 		return fromQuery;
 	}
 
-	const currentPath = ( window.location.pathname || '' ).replace( /\/+$/, '' );
-	const last = currentPath.split( '/' ).filter( Boolean ).pop() || '';
-	if ( ! last ) {
-		return '';
-	}
-
+	const currentPath = normalizePath( window.location.pathname || '' );
 	const links = document.querySelectorAll(
 		'.forwp-faq-categories__link[data-faq-cat]'
 	);
 	let match = '';
 	links.forEach( ( link ) => {
-		const slug = link.getAttribute( 'data-faq-cat' ) || '';
-		if ( slug && slug === last ) {
-			match = slug;
+		const slug = ( link.getAttribute( 'data-faq-cat' ) || '' ).trim();
+		if ( ! slug || match ) {
+			return;
+		}
+		const href = link.getAttribute( 'href' ) || '';
+		if ( ! href || href === '#' ) {
+			return;
+		}
+		try {
+			const linkPath = normalizePath(
+				new URL( href, window.location.origin ).pathname || ''
+			);
+			if ( linkPath === currentPath ) {
+				match = slug;
+			}
+		} catch ( e ) {
+			// Ignore malformed hrefs.
 		}
 	} );
 	return match;
@@ -115,13 +132,17 @@ const { state } = store( 'forwp/faq', {
 		get isGroupVisible() {
 			const ctx = getContext() || {};
 			if ( state.category ) {
+				const slug = ctx.slug || '';
 				const ancestors = ( ctx.ancestors || '' )
 					.split( /\s+/ )
 					.filter( Boolean );
-				if (
-					( ctx.slug || '' ) !== state.category &&
-					ancestors.indexOf( state.category ) === -1
-				) {
+				const isSelf = slug === state.category;
+				const isDescendant =
+					ancestors.indexOf( state.category ) !== -1;
+				// Keep parents of the active category visible (nested list HTML).
+				const isAncestor =
+					( state.categoryAncestors || [] ).indexOf( slug ) !== -1;
+				if ( ! isSelf && ! isDescendant && ! isAncestor ) {
 					return false;
 				}
 			}
@@ -181,7 +202,7 @@ const { state } = store( 'forwp/faq', {
 			if ( event && typeof event.preventDefault === 'function' ) {
 				event.preventDefault();
 			}
-			state.category = ctx.slug || '';
+			applyCategory( ctx.slug || '', ctx.ancestors || '' );
 			window.requestAnimationFrame( () => {
 				state.visibleCount = currentCount();
 			} );
@@ -202,11 +223,50 @@ const { state } = store( 'forwp/faq', {
 	},
 } );
 
+const ancestorsForSlug = ( slug ) => {
+	if ( ! slug ) {
+		return [];
+	}
+	const groups = document.querySelectorAll( '.forwp-faq-list__group' );
+	for ( let i = 0; i < groups.length; i++ ) {
+		const raw = groups[ i ].getAttribute( 'data-wp-context' );
+		if ( ! raw ) {
+			continue;
+		}
+		try {
+			const ctx = JSON.parse( raw );
+			if ( ( ctx.slug || '' ) === slug ) {
+				return String( ctx.ancestors || '' )
+					.split( /\s+/ )
+					.filter( Boolean );
+			}
+		} catch ( e ) {
+			// Ignore malformed context.
+		}
+	}
+	return [];
+};
+
+const applyCategory = ( slug, ancestorsRaw ) => {
+	state.category = slug || '';
+	if ( ! slug ) {
+		state.categoryAncestors = [];
+		return;
+	}
+	if ( typeof ancestorsRaw === 'string' && ancestorsRaw.trim() ) {
+		state.categoryAncestors = ancestorsRaw.split( /\s+/ ).filter( Boolean );
+		return;
+	}
+	state.categoryAncestors = ancestorsForSlug( slug );
+};
+
 if ( ! state.category ) {
 	const fromUrl = categoryFromLocation();
 	if ( fromUrl ) {
-		state.category = fromUrl;
+		applyCategory( fromUrl );
 	}
+} else if ( ! Array.isArray( state.categoryAncestors ) ) {
+	state.categoryAncestors = ancestorsForSlug( state.category );
 }
 
 if ( typeof state.search !== 'string' ) {
@@ -218,6 +278,6 @@ if ( typeof state.visibleCount !== 'number' ) {
 }
 
 window.addEventListener( 'popstate', () => {
-	state.category = categoryFromLocation();
+	applyCategory( categoryFromLocation() );
 	state.visibleCount = currentCount();
 } );
