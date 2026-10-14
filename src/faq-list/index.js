@@ -19,6 +19,7 @@ import apiFetch from '@wordpress/api-fetch';
 import ServerSideRender from '@wordpress/server-side-render';
 
 import { useSyncCategoryFilters } from '../display/sync-filters';
+import { useTermTokenField } from '../display/term-tokens';
 import { FaqTypographyPanel } from '../display/typography-panels';
 
 import './style.scss';
@@ -115,16 +116,6 @@ const useRegistryCategories = () => {
 	return { terms, loading, registryReady };
 };
 
-const idsToNames = ( ids, terms ) =>
-	( ids || [] )
-		.map( ( id ) => terms.find( ( term ) => term.id === id )?.name )
-		.filter( Boolean );
-
-const namesToIds = ( names, terms ) =>
-	( names || [] )
-		.map( ( name ) => terms.find( ( term ) => term.name === name )?.id )
-		.filter( Boolean );
-
 registerBlockType( 'forwp/faq-list', {
 	edit: ( { attributes, setAttributes, clientId } ) => {
 		const {
@@ -142,6 +133,18 @@ registerBlockType( 'forwp/faq-list', {
 		} = attributes;
 		const { terms, loading, registryReady } = useRegistryCategories();
 		useSyncCategoryFilters( clientId, includeTermIds, excludeTermIds );
+		const includeTokens = useTermTokenField(
+			includeTermIds,
+			terms,
+			setAttributes,
+			'includeTermIds'
+		);
+		const excludeTokens = useTermTokenField(
+			excludeTermIds,
+			terms,
+			setAttributes,
+			'excludeTermIds'
+		);
 		const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
 		const blockProps = useBlockProps( {
 			className: 'forwp-faq-list-editor',
@@ -294,13 +297,9 @@ registerBlockType( 'forwp/faq-list', {
 							<>
 								<FormTokenField
 									label={ __( 'Include categories', '4wp-faq' ) }
-									value={ idsToNames( includeTermIds, terms ) }
+									value={ includeTokens.value }
 									suggestions={ suggestions }
-									onChange={ ( tokens ) =>
-										setAttributes( {
-											includeTermIds: namesToIds( tokens, terms ),
-										} )
-									}
+									onChange={ includeTokens.onChange }
 									__experimentalExpandOnFocus
 									__nextHasNoMarginBottom
 								/>
@@ -312,13 +311,9 @@ registerBlockType( 'forwp/faq-list', {
 								</p>
 								<FormTokenField
 									label={ __( 'Exclude categories', '4wp-faq' ) }
-									value={ idsToNames( excludeTermIds, terms ) }
+									value={ excludeTokens.value }
 									suggestions={ suggestions }
-									onChange={ ( tokens ) =>
-										setAttributes( {
-											excludeTermIds: namesToIds( tokens, terms ),
-										} )
-									}
+									onChange={ excludeTokens.onChange }
 									__experimentalExpandOnFocus
 									__nextHasNoMarginBottom
 								/>

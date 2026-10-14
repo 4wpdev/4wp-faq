@@ -21,6 +21,8 @@ JSON-LD works **without** the registry. The registry is a helper: scan unique qu
 ## Version 2.6.4
 
 - **Hub filter:** a page whose slug matches a FAQ category (e.g. `/4wp-faq/`) no longer filters the List to that category. Pretty URLs still use the full path (`/page/term-slug/`). Accordion FAQ on the page is separate; hub blocks follow their own settings.
+- **Editor:** Include/Exclude category pickers no longer hit a Maximum update depth loop when List and Categories sync.
+- **Convert to FAQ:** Accordion items are kept when wrapping; **Unwrap 4WP FAQ** removes the wrapper.
 
 ## Version 2.6.3
 

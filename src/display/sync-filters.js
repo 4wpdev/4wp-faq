@@ -15,12 +15,17 @@ const collectFilterBlocks = ( blocks, acc = [] ) => {
 	return acc;
 };
 
-const idsKey = ( ids ) =>
+export const idsKey = ( ids ) =>
 	[ ...( ids || [] ) ]
 		.map( ( id ) => Number( id ) )
 		.filter( ( id ) => id > 0 )
 		.sort( ( a, b ) => a - b )
 		.join( ',' );
+
+const normalizeIds = ( ids ) =>
+	[ ...( ids || [] ) ]
+		.map( ( id ) => Number( id ) )
+		.filter( ( id ) => id > 0 );
 
 const getOtherFilterBlocks = ( clientId ) =>
 	collectFilterBlocks(
@@ -41,23 +46,31 @@ export const useSyncCategoryFilters = (
 	excludeTermIds
 ) => {
 	const { updateBlockAttributes } = useDispatch( 'core/block-editor' );
-	const siblingKey = useSelect(
+	const includeKey = idsKey( includeTermIds );
+	const excludeKey = idsKey( excludeTermIds );
+	const filterKey = `${ includeKey }|${ excludeKey }`;
+	const lastPushedKey = useRef( '' );
+	const didMount = useRef( false );
+
+	// Re-run only when another filter block's filters change (adopt / echo guard).
+	const siblingFilterKey = useSelect(
 		( selector ) =>
 			collectFilterBlocks( selector( 'core/block-editor' ).getBlocks() )
 				.filter( ( block ) => block.clientId !== clientId )
 				.map(
 					( block ) =>
-						`${ block.clientId }:${ idsKey(
-							block.attributes?.includeTermIds
-						) }:${ idsKey( block.attributes?.excludeTermIds ) }`
+						`${ idsKey( block.attributes?.includeTermIds ) }:${ idsKey(
+							block.attributes?.excludeTermIds
+						) }`
 				)
 				.join( '|' ),
 		[ clientId ]
 	);
-	const didMount = useRef( false );
 
 	useEffect( () => {
 		const others = getOtherFilterBlocks( clientId );
+		const nextInclude = normalizeIds( includeTermIds );
+		const nextExclude = normalizeIds( excludeTermIds );
 
 		if ( ! didMount.current ) {
 			didMount.current = true;
@@ -66,26 +79,40 @@ export const useSyncCategoryFilters = (
 					( block.attributes?.includeTermIds || [] ).length > 0 ||
 					( block.attributes?.excludeTermIds || [] ).length > 0
 			);
-			const selfEmpty =
-				( includeTermIds || [] ).length === 0 &&
-				( excludeTermIds || [] ).length === 0;
+			const selfEmpty = ! includeKey && ! excludeKey;
 
 			if ( source && selfEmpty ) {
+				const adoptedInclude = normalizeIds(
+					source.attributes.includeTermIds
+				);
+				const adoptedExclude = normalizeIds(
+					source.attributes.excludeTermIds
+				);
+				lastPushedKey.current = `${ idsKey( adoptedInclude ) }|${ idsKey(
+					adoptedExclude
+				) }`;
 				updateBlockAttributes( clientId, {
-					includeTermIds: source.attributes.includeTermIds || [],
-					excludeTermIds: source.attributes.excludeTermIds || [],
+					includeTermIds: adoptedInclude,
+					excludeTermIds: adoptedExclude,
 				} );
+				return;
 			}
+
+			lastPushedKey.current = filterKey;
 			return;
 		}
 
-		const nextInclude = includeTermIds || [];
-		const nextExclude = excludeTermIds || [];
+		// Sibling wrote the same filters onto us — do not push back.
+		if ( lastPushedKey.current === filterKey ) {
+			return;
+		}
+
+		lastPushedKey.current = filterKey;
 
 		others.forEach( ( block ) => {
 			if (
-				idsKey( block.attributes?.includeTermIds ) === idsKey( nextInclude ) &&
-				idsKey( block.attributes?.excludeTermIds ) === idsKey( nextExclude )
+				idsKey( block.attributes?.includeTermIds ) === includeKey &&
+				idsKey( block.attributes?.excludeTermIds ) === excludeKey
 			) {
 				return;
 			}
@@ -95,11 +122,14 @@ export const useSyncCategoryFilters = (
 				excludeTermIds: nextExclude,
 			} );
 		} );
+		// includeTermIds / excludeTermIds read from this render when keys change.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		clientId,
-		includeTermIds,
-		excludeTermIds,
-		siblingKey,
+		includeKey,
+		excludeKey,
+		filterKey,
+		siblingFilterKey,
 		updateBlockAttributes,
 	] );
 };

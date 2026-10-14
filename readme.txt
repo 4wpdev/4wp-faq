@@ -225,6 +225,8 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 
 = 2.6.4 =
 * **Hub filter:** the host page slug (e.g. `/4wp-faq/`) no longer activates a FAQ category with the same slug. Pretty category URLs still match the full nav path (`/4wp-faq/hooks/`). Accordion FAQ on the page is unchanged; List / Categories keep their own settings.
+* **Editor:** Include/Exclude category tokens no longer freeze the editor (Maximum update depth) when List and Categories sync filters.
+* **Convert to FAQ:** wrapping an Accordion no longer drops its items (toolbar used empty innerBlocks). **Unwrap 4WP FAQ** restores the Accordion / Details.
 
 = 2.6.3 =
 * **Typography:** List, Card, and Categories panels match core (size, appearance, line height, letter spacing, decoration, letter case).
@@ -308,7 +310,7 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 == Upgrade Notice ==
 
 = 2.6.4 =
-Hub List no longer disappears when the page slug matches a FAQ category. Category pretty URLs still filter correctly.
+Hub List no longer disappears when the page slug matches a FAQ category. Convert to FAQ keeps Accordion items; Unwrap restores them. Include/Exclude no longer freezes the editor.
 
 = 2.6.3 =
 Typography matches core, Used in stays on one line, the count matches the categories on the page, empty search has an editable message, and the dashboard follows the admin language.

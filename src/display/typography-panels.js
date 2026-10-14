@@ -19,7 +19,13 @@ import {
 } from '@wordpress/components';
 import { useViewportMatch } from '@wordpress/compose';
 import { useSelect } from '@wordpress/data';
+import { useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
+
+const EMPTY_DROPDOWN_MENU_PROPS = {};
+const DESKTOP_DROPDOWN_MENU_PROPS = {
+	popoverProps: { placement: 'left-start', offset: 259 },
+};
 
 /**
  * Flatten theme.json font family settings into FontFamilyControl list.
@@ -180,9 +186,11 @@ export const useEditorTypography = () =>
  */
 export const useFaqDropdownMenuProps = () => {
 	const isMobile = useViewportMatch( 'medium', '<' );
-	return isMobile
-		? {}
-		: { popoverProps: { placement: 'left-start', offset: 259 } };
+	return useMemo(
+		() =>
+			isMobile ? EMPTY_DROPDOWN_MENU_PROPS : DESKTOP_DROPDOWN_MENU_PROPS,
+		[ isMobile ]
+	);
 };
 
 const EMPTY_COLOR_GRADIENT_SETTINGS = {

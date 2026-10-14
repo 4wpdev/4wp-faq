@@ -1,4 +1,9 @@
-import { registerBlockType, createBlock } from '@wordpress/blocks';
+import {
+	registerBlockType,
+	createBlock,
+	cloneBlock,
+	serialize,
+} from '@wordpress/blocks';
 import { InnerBlocks, BlockControls, InspectorControls } from '@wordpress/block-editor';
 import { ToolbarGroup, ToolbarButton } from '@wordpress/components';
 import { useDispatch, useSelect } from '@wordpress/data';
@@ -17,8 +22,17 @@ import {
 	FormTokenField,
 } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { serialize } from '@wordpress/blocks';
 import './search-binding';
+
+/**
+ * Wrap an existing accordion / details tree in forwp/faq without dropping children.
+ * BlockEdit often has empty props.innerBlocks — pass a block from getBlock().
+ *
+ * @param {Object} block Block from getBlock().
+ * @return {Object} forwp/faq block.
+ */
+const wrapBlockAsFaq = ( block ) =>
+	createBlock( 'forwp/faq', {}, [ cloneBlock( block ) ] );
 
 const extractTextFromBlocks = ( blocks ) => {
 	if ( ! blocks || ! blocks.length ) {
@@ -282,6 +296,13 @@ const createFaqFromTextBlocks = ( blocks ) => {
 	] );
 };
 
+const mapInnerTrees = ( inners ) =>
+	( inners || [] ).map( ( inner ) =>
+		inner && typeof inner === 'object' && inner.name
+			? cloneBlock( inner )
+			: inner
+	);
+
 const createFaqFromDetails = ( attributes, innerBlocks ) => {
 	const isMulti = Array.isArray( attributes );
 	const attrsList = isMulti ? attributes : [ attributes ];
@@ -291,7 +312,11 @@ const createFaqFromDetails = ( attributes, innerBlocks ) => {
 		'forwp/faq',
 		{},
 		attrsList.map( ( attrs, i ) =>
-			createBlock( 'core/details', attrs || {}, innersList[ i ] || [] )
+			createBlock(
+				'core/details',
+				attrs || {},
+				mapInnerTrees( innersList[ i ] || [] )
+			)
 		)
 	);
 };
@@ -306,7 +331,11 @@ const createFaqFromAccordionItems = ( attributes, innerBlocks ) => {
 			'core/accordion',
 			{},
 			attrsList.map( ( attrs, i ) =>
-				createBlock( 'core/accordion-item', attrs || {}, innersList[ i ] || [] )
+				createBlock(
+					'core/accordion-item',
+					attrs || {},
+					mapInnerTrees( innersList[ i ] || [] )
+				)
 			)
 		),
 	] );
@@ -367,6 +396,7 @@ const createFaqFromHeadingParagraphPairs = ( attributes, innerBlocks ) => {
 };
 
 const CONVERT_TO_FAQ_LABEL = __( 'Convert to 4WP FAQ', '4wp-faq' );
+const UNWRAP_FAQ_LABEL = __( 'Unwrap 4WP FAQ', '4wp-faq' );
 
 const textBlocksToFaqTransform = {
 	type: 'block',
@@ -567,9 +597,12 @@ registerBlockType( 'forwp/faq', {
 			postId: select( 'core/editor' )?.getCurrentPostId?.() || 0,
 		} ), [ props.clientId ] );
 
-		const { insertBlock } = useDispatch( 'core/block-editor' );
+		const { insertBlock, replaceBlock, replaceBlocks } = useDispatch(
+			'core/block-editor'
+		);
 
 		const currentBlock = getBlock( clientId );
+		const hasInnerBlocks = ( currentBlock?.innerBlocks || [] ).length > 0;
 		const items = useMemo( () => collectFaqItems( currentBlock?.innerBlocks || [] ), [ currentBlock ] );
 		const accordionBlock = useMemo( () => {
 			const inners = currentBlock?.innerBlocks || [];
@@ -646,8 +679,30 @@ registerBlockType( 'forwp/faq', {
 			insertBlock( createDefaultAccordionBlock(), clientId, 0 );
 		};
 
+		const onUnwrapFaq = () => {
+			const inners = currentBlock?.innerBlocks || [];
+			if ( ! inners.length ) {
+				replaceBlock( clientId, createDefaultAccordionBlock() );
+				return;
+			}
+			replaceBlocks(
+				[ clientId ],
+				inners.map( ( inner ) => cloneBlock( inner ) )
+			);
+		};
+
 		return (
 			<Fragment>
+				<BlockControls>
+					<ToolbarGroup>
+						<ToolbarButton
+							icon="undo"
+							text={ UNWRAP_FAQ_LABEL }
+							label={ UNWRAP_FAQ_LABEL }
+							onClick={ onUnwrapFaq }
+						/>
+					</ToolbarGroup>
+				</BlockControls>
 				<InspectorControls>
 					<PanelBody title={ __( 'SEO', '4wp-faq' ) } initialOpen>
 						<SelectControl
@@ -781,7 +836,11 @@ registerBlockType( 'forwp/faq', {
 				<div className={ props.className }>
 					<InnerBlocks
 						allowedBlocks={ ALLOWED_FAQ_INNER_BLOCKS }
-						template={ getDefaultFaqInnerTemplate() }
+						template={
+							hasInnerBlocks
+								? undefined
+								: getDefaultFaqInnerTemplate()
+						}
 						templateLock={ false }
 					/>
 					<div
@@ -879,51 +938,42 @@ const withFaqTransform = createHigherOrderComponent(
 					return;
 				}
 
+				const source = getBlock( props.clientId );
+				if ( ! source ) {
+					return;
+				}
+
 				if ( isList ) {
 					replaceBlock(
 						props.clientId,
-						createFaqFromList( props.attributes, props.innerBlocks )
+						createFaqFromList( source.attributes, source.innerBlocks )
 					);
 					return;
 				}
 
 				if ( isDetails ) {
-					replaceBlock(
-						props.clientId,
-						createFaqFromDetails( props.attributes, props.innerBlocks )
-					);
+					replaceBlock( props.clientId, wrapBlockAsFaq( source ) );
 					return;
 				}
 
 				if ( isAccordion ) {
-					replaceBlock(
-						props.clientId,
-						createBlock( 'forwp/faq', {}, [
-							createBlock( props.name, props.attributes, props.innerBlocks ),
-						] )
-					);
+					replaceBlock( props.clientId, wrapBlockAsFaq( source ) );
 					return;
 				}
 
 				const parentId = getBlockRootClientId( props.clientId );
 				const parentBlock = parentId ? getBlock( parentId ) : null;
 				if ( parentBlock && isAccordionBlock( parentBlock.name ) ) {
-					replaceBlock(
-						parentId,
-						createBlock( 'forwp/faq', {}, [
-							createBlock(
-								parentBlock.name,
-								parentBlock.attributes,
-								parentBlock.innerBlocks
-							),
-						] )
-					);
+					replaceBlock( parentId, wrapBlockAsFaq( parentBlock ) );
 					return;
 				}
 
 				replaceBlock(
 					props.clientId,
-					createFaqFromAccordionItems( props.attributes, props.innerBlocks )
+					createFaqFromAccordionItems(
+						source.attributes,
+						source.innerBlocks
+					)
 				);
 			};
 
