@@ -1,28 +1,44 @@
 === 4WP FAQ ===
 Contributors: 4wpdev, anatolikkk
-Tags: faq, accordion, json-ld, gutenberg, seo
+Tags: faq, faq schema, accordion, json-ld, structured data
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 2.6.4
+Stable tag: 2.6.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-FAQPage schema for core Accordion, optional registry you can edit or add from, hub pages, and AI via Connectors.
+FAQ schema for the core Accordion. Scan every question on your site into one registry, edit once, and build a searchable FAQ hub.
 
 == Description ==
 
-4WP FAQ wraps WordPress core **Accordion** blocks so you can keep your design and still get:
+**Not another FAQ block.** 4WP FAQ wraps the core **Accordion** you already use, adds **FAQPage JSON-LD**, and turns every question on your site into one registry you can reuse, update everywhere, and show as a searchable hub. Your design stays the same.
 
-* **FAQPage JSON-LD** for Google rich results (off by default; turn on when you are ready)
-* An optional **FAQ registry** (scan of unique questions). Edit one record to push Q/A onto every **Used In** page. **Add FAQ** places a new item on category pages or one page. Site content stays the source of truth.
-* **Hub pages** with List + Categories blocks, pretty category URLs, category SEO titles, collapsible subcategory nav, and drag-and-drop category order (admin + front end)
-* **Drag-and-drop FAQ category order** on **FAQ → Categories** — same order in admin lists and on the front end (List / Categories hub)
-* Optional **AI category copy** through the standard **WordPress AI Client** (Settings → Connectors) — description, display title, SEO title, and SEO description. No custom vendor SDK.
+https://www.youtube.com/watch?v=SI3slJFYVbg
+
+👉 **Live demo, docs and comparison:** [4wp.dev/plugin/4wp-faq](https://4wp.dev/plugin/4wp-faq/)
+💬 **Real hub with 296 questions in 9 categories:** [4wp.dev/faqs](https://4wp.dev/faqs/)
+
+= Why 4WP FAQ =
+
+* **Built on core.** A thin wrapper over the core Accordion. No new design, no lock-in: unwrap any time and the Accordion stays.
+* **The only FAQ plugin that scans.** Questions live on your pages. A scan collects them into one registry. You never type a question twice.
+* **Edit once, update everywhere.** Change a question in the registry and 4WP FAQ writes it onto every page listed in **Used in**.
+* **SEO hub for free.** List, Categories, Search and Count blocks, pretty category URLs, category SEO titles, canonical and Open Graph. No Pro tier.
+* **AI without a vendor.** Category copy through the standard **WordPress AI Client** (Connectors). No custom SDK, no API keys in the plugin.
+
+= What you get =
+
+* **FAQPage JSON-LD** — structured data for search engines and AI answers. Opt-in, site-wide or per block. Skips its own output when Yoast already prints FAQ schema.
+* **Convert to FAQ** — one click on an Accordion, or **Transform to → 4WP FAQ** from Details, heading + paragraph pairs or a List.
+* **FAQ registry** — every unique question with **Used in** sources, categories and a Dashboard. **Add FAQ** places a new question on every page of a category, or on one page.
+* **FSE hub** — **4WP FAQ List**, **Categories**, **Count** and core **Search** with in-place filtering (Interactivity API). Nested categories, drag-and-drop order.
+* **Polylang** — categories follow the page language; the Dashboard shows figures per language.
+* **4WP Drive** — an H2 FAQ section with H3 questions in a Google Doc becomes a 4WP FAQ block on import.
 
 A plugin by [4wp.dev](https://4wp.dev/). **4WP** is our project brand; this plugin is not affiliated with, endorsed, or sponsored by WordPress.
 
-Source: [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq)
+Source: [github.com/4wpdev/4wp-faq](https://github.com/4wpdev/4wp-faq) · More plugins: [4wp.dev/plugins](https://4wp.dev/plugins/)
 
 = How to work with it (short path) =
 
@@ -209,9 +225,15 @@ It uses the standard **WordPress AI Client**, not a separate 4WP AI plugin. Conf
 
 == Screenshots ==
 
-1. 4WP FAQ block wrapping core Accordion in the editor
-2. Settings — rescan, JSON-LD, preview count, pretty category URLs, and how category titles are built
-3. FAQ hub — List + Categories (and Count) in the Site Editor
+1. A live FAQ hub on 4wp.dev: 296 questions, category navigation, search and count — built from the 4WP FAQ registry.
+2. Convert to FAQ: one click wraps a core Accordion. Your design stays the same.
+3. One Accordion Item = one question (heading) and one answer (panel).
+4. FAQ → Settings: turn on FAQPage JSON-LD site-wide or per block.
+5. FAQ Dashboard: registry status, Rescan, questions by category, reused and uncategorized.
+6. Build the hub in the Site Editor: Categories, List, Search and Count blocks.
+7. Add FAQ: place a new question on every page of a category, or on one page.
+8. Edit once in the registry — the update is written to every page in Used in.
+9. Generate category description and SEO titles with the WordPress AI Client.
 
 == External services ==
 
@@ -222,6 +244,10 @@ This plugin optionally sends prompts through the **WordPress AI Client** when an
 The plugin sends a prompt (site name, category name, question titles in that category, and current field values) through `wp_ai_client_prompt()`. The WordPress AI Client routes that prompt to the connector the administrator selected. This plugin does not call model vendors directly; which remote service receives the prompt depends on that connector. No visitor or front-end user data is sent. Nothing is generated until a connector is configured and **Allow predefined field markup** is on.
 
 == Changelog ==
+
+= 2.6.5 =
+* **Directory assets:** animated banner and icon GIFs for WordPress.org; nine screenshots aligned with the current hub and editor UI.
+* **Docs:** README and readme.txt refreshed for the directory listing (demo, comparison, video).
 
 = 2.6.4 =
 * **Hub filter:** the host page slug (e.g. `/4wp-faq/`) no longer activates a FAQ category with the same slug. Pretty category URLs still match the full nav path (`/4wp-faq/hooks/`). Accordion FAQ on the page is unchanged; List / Categories keep their own settings.
@@ -308,6 +334,9 @@ The plugin sends a prompt (site name, category name, question titles in that cat
 * Initial release: `forwp/faq` wrapper, setup wizard, registry scan, JSON-LD, admin settings UI.
 
 == Upgrade Notice ==
+
+= 2.6.5 =
+WordPress.org banner/icon GIFs and screenshots; directory docs refresh. No functional change from 2.6.4.
 
 = 2.6.4 =
 Hub List no longer disappears when the page slug matches a FAQ category. Convert to FAQ keeps Accordion items; Unwrap restores them. Include/Exclude no longer freezes the editor.
