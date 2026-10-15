@@ -15,6 +15,7 @@ WordPress.org users see [readme.txt](../../readme.txt) (`== Changelog ==`). Keep
 
 | File | When |
 |------|------|
+| `2.6.5.md` | Release **2.6.5** — directory GIF banner/icons and screenshots; ships 2.6.2–2.6.4 hub and editor fixes to wp.org |
 | `2.6.1.md` | Release **2.6.1** — 4WP Drive import mapping for `forwp/faq` |
 | `2.6.0.md` | Release **2.6.0** — registry edit/add writes FAQ items onto pages; scan still rebuilds from content |
 | `2.5.0.md` | Release **2.5.0** — AI category copy via WordPress Connectors |
