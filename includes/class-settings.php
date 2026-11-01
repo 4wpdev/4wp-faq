@@ -26,6 +26,11 @@ class Settings {
 	/** Allow the predefined AI field map (category Description, titles, meta). */
 	public const OPTION_AI_FIELD_MARKUP = 'forwp_faq_ai_field_markup';
 
+	/** Graph relations (admin). */
+	public const OPTION_GRAPH_ENABLED   = 'forwp_faq_graph_enabled';
+	public const OPTION_GRAPH_RENDERER  = 'forwp_faq_graph_renderer';
+	public const DEFAULT_GRAPH_RENDERER = 'cytoscape';
+
 	public const DEFAULT_PREVIEW_PER_CATEGORY = 5;
 
 	public const STATUS_PENDING  = 'pending';
@@ -186,6 +191,35 @@ class Settings {
 	 */
 	public static function set_ai_field_markup( $enabled ) {
 		update_option( self::OPTION_AI_FIELD_MARKUP, $enabled ? 1 : 0 );
+	}
+
+	/**
+	 * Graph relations view enabled (admin only). On by default: read-only, nothing stored.
+	 */
+	public static function is_graph_enabled() {
+		return (bool) get_option( self::OPTION_GRAPH_ENABLED, true );
+	}
+
+	/**
+	 * @param bool $enabled Enabled.
+	 */
+	public static function set_graph_enabled( $enabled ) {
+		update_option( self::OPTION_GRAPH_ENABLED, $enabled ? 1 : 0 );
+	}
+
+	/**
+	 * @return string Renderer slug.
+	 */
+	public static function get_graph_renderer() {
+		$slug = sanitize_key( (string) get_option( self::OPTION_GRAPH_RENDERER, self::DEFAULT_GRAPH_RENDERER ) );
+		return '' !== $slug ? $slug : self::DEFAULT_GRAPH_RENDERER;
+	}
+
+	/**
+	 * @param string $slug Renderer slug.
+	 */
+	public static function set_graph_renderer( $slug ) {
+		update_option( self::OPTION_GRAPH_RENDERER, sanitize_key( (string) $slug ) );
 	}
 
 	/**

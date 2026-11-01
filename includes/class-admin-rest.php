@@ -52,6 +52,14 @@ class Admin_Rest {
 							'type'     => 'boolean',
 							'required' => false,
 						],
+						'graph_enabled'        => [
+							'type'     => 'boolean',
+							'required' => false,
+						],
+						'graph_renderer'       => [
+							'type'     => 'string',
+							'required' => false,
+						],
 					],
 				],
 			]
@@ -116,6 +124,12 @@ class Admin_Rest {
 				'ai_available'           => class_exists( \ForWP\AI\Client::class ) && \ForWP\AI\Client::is_available(),
 				'ai_field_markup'        => Settings::is_ai_field_markup_enabled(),
 				'ai_connectors_url'      => admin_url( 'options-connectors.php' ),
+				'graph_available'        => class_exists( \ForWP\Graph\Renderer_Registry::class ),
+				'graph_enabled'          => Settings::is_graph_enabled(),
+				'graph_renderer'         => Settings::get_graph_renderer(),
+				'graph_renderers'        => class_exists( \ForWP\Graph\Renderer_Registry::class ) ? \ForWP\Graph\Renderer_Registry::get_choices() : [],
+				'graph_layer_version'    => defined( 'FORWP_GRAPH_LAYER_VERSION' ) ? FORWP_GRAPH_LAYER_VERSION : '',
+				'graph_url'              => Admin_Graph::get_page_url(),
 				'setup_complete' => Settings::is_setup_complete(),
 				'setup_skipped'  => Settings::is_setup_skipped(),
 				'setup_url'      => Setup_Wizard::get_page_url(),
@@ -153,6 +167,25 @@ class Admin_Rest {
 			}
 
 			Settings::set_ai_field_markup( $enable_ai );
+		}
+
+		if ( $request->has_param( 'graph_enabled' ) ) {
+			Settings::set_graph_enabled( (bool) $request->get_param( 'graph_enabled' ) );
+		}
+
+		if ( $request->has_param( 'graph_renderer' ) ) {
+			$slug     = sanitize_key( (string) $request->get_param( 'graph_renderer' ) );
+			$renderer = class_exists( \ForWP\Graph\Renderer_Registry::class ) ? \ForWP\Graph\Renderer_Registry::get( $slug ) : null;
+
+			if ( ! $renderer ) {
+				return new \WP_Error(
+					'forwp_faq_graph_renderer_unknown',
+					__( 'Unknown graph renderer.', '4wp-faq' ),
+					[ 'status' => 400 ]
+				);
+			}
+
+			Settings::set_graph_renderer( $slug );
 		}
 
 		return self::get_settings();

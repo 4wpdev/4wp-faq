@@ -1,0 +1,350 @@
+/* 4WP Graph view (admin). Domain-agnostic. */
+.forwp-graph {
+	--forwp-graph-border: #dcdcde;
+	--forwp-graph-muted: #646970;
+	--forwp-graph-issue: #dba617;
+	--forwp-graph-bg: #fff;
+	max-width: 1600px;
+}
+
+.forwp-graph-app.is-loading .forwp-graph__canvas {
+	opacity: 0.5;
+}
+
+.forwp-graph__status:not(:empty) {
+	margin: 8px 0;
+	color: var(--forwp-graph-muted);
+}
+
+/* Tiles */
+.forwp-graph__tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+	gap: 8px;
+	margin: 16px 0;
+}
+
+.forwp-graph__tile {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: 12px 14px;
+	background: var(--forwp-graph-bg);
+	border: 1px solid var(--forwp-graph-border);
+	border-radius: 4px;
+	text-align: left;
+	font: inherit;
+}
+
+button.forwp-graph__tile {
+	cursor: pointer;
+}
+
+button.forwp-graph__tile:hover,
+button.forwp-graph__tile:focus-visible {
+	border-color: #2271b1;
+}
+
+.forwp-graph__tile.is-issue {
+	border-left: 4px solid var(--forwp-graph-issue);
+}
+
+.forwp-graph__tile-value {
+	font-size: 22px;
+	font-weight: 600;
+	line-height: 1.2;
+	color: #1d2327;
+}
+
+.forwp-graph__tile-label {
+	font-size: 12px;
+	color: #1d2327;
+}
+
+.forwp-graph__tile-hint {
+	font-size: 11px;
+	color: var(--forwp-graph-muted);
+}
+
+.forwp-graph__tile .forwp-graph__swatch {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+}
+
+/* Toolbar */
+.forwp-graph__toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.forwp-graph__segmented {
+	display: inline-flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.forwp-graph__toolbar-right {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px;
+}
+
+.forwp-graph__select,
+.forwp-graph__search {
+	min-height: 30px;
+}
+
+.forwp-graph__search {
+	width: 200px;
+}
+
+/* Stage */
+.forwp-graph__stage {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 300px;
+	gap: 12px;
+}
+
+.forwp-graph__main {
+	min-width: 0;
+}
+
+.forwp-graph__canvas {
+	height: 640px;
+	background:
+		radial-gradient(circle, #e0e0e0 1px, transparent 1px) 0 0 / 22px 22px,
+		var(--forwp-graph-bg);
+	border: 1px solid var(--forwp-graph-border);
+	border-radius: 4px;
+}
+
+.forwp-graph__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 16px;
+	align-items: center;
+	padding: 8px 2px;
+	font-size: 12px;
+}
+
+.forwp-graph__legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.forwp-graph__legend-note {
+	color: var(--forwp-graph-muted);
+}
+
+.forwp-graph__swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	flex: none;
+}
+
+.forwp-graph__swatch.shape-group {
+	border-radius: 3px;
+}
+
+.forwp-graph__swatch.shape-context {
+	border-radius: 0;
+	transform: rotate(45deg) scale(0.8);
+}
+
+.forwp-graph__swatch.is-ring {
+	background: transparent;
+	border: 3px solid;
+	box-sizing: border-box;
+}
+
+/* Side panel */
+.forwp-graph__panel {
+	max-height: 680px;
+	overflow: auto;
+	padding: 14px;
+	background: var(--forwp-graph-bg);
+	border: 1px solid var(--forwp-graph-border);
+	border-radius: 4px;
+}
+
+.forwp-graph__panel h3 {
+	margin: 8px 0 4px;
+	font-size: 14px;
+	line-height: 1.4;
+}
+
+.forwp-graph__panel h4 {
+	margin: 16px 0 6px;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.02em;
+	color: var(--forwp-graph-muted);
+}
+
+.forwp-graph__hint,
+.forwp-graph__meta {
+	margin: 0;
+	color: var(--forwp-graph-muted);
+}
+
+.forwp-graph__badge {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 10px;
+	color: #fff;
+	font-size: 11px;
+}
+
+.forwp-graph__flags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin: 8px 0;
+}
+
+.forwp-graph__flag {
+	padding: 2px 8px;
+	border-radius: 10px;
+	font-size: 11px;
+	background: #fcf9e8;
+	border: 1px solid var(--forwp-graph-issue);
+}
+
+.forwp-graph__flag.flag-hub {
+	background: #f0f6fc;
+	border-color: #72aee6;
+}
+
+.forwp-graph__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.forwp-graph__list li {
+	margin: 0 0 4px;
+}
+
+.forwp-graph__list .button-link {
+	text-align: left;
+}
+
+/* Charts */
+.forwp-graph__charts {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+	gap: 12px;
+	margin-top: 16px;
+}
+
+.forwp-graph__chart {
+	padding: 14px 16px;
+	background: var(--forwp-graph-bg);
+	border: 1px solid var(--forwp-graph-border);
+	border-radius: 4px;
+}
+
+.forwp-graph__chart--wide {
+	grid-column: 1 / -1;
+}
+
+.forwp-graph__chart h3 {
+	margin: 0 0 12px;
+	font-size: 14px;
+}
+
+.forwp-graph__bars {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.forwp-graph__bars li {
+	display: grid;
+	grid-template-columns: minmax(0, 180px) minmax(0, 1fr) 36px;
+	align-items: center;
+	gap: 8px;
+	margin: 0 0 6px;
+}
+
+.forwp-graph__bar-label {
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	text-align: left;
+}
+
+.forwp-graph__bar-track {
+	height: 12px;
+	background: #f0f0f1;
+	border-radius: 2px;
+}
+
+.forwp-graph__bar-fill {
+	display: block;
+	height: 100%;
+	border-radius: 2px;
+}
+
+.forwp-graph__bar-value {
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+
+.forwp-graph__stack {
+	display: flex;
+	height: 22px;
+	overflow: hidden;
+	border-radius: 3px;
+	gap: 2px;
+}
+
+.forwp-graph__stack-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 20px;
+	margin: 10px 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.forwp-graph__stack-legend li {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin: 0;
+}
+
+@media (max-width: 1100px) {
+	.forwp-graph__stage {
+		grid-template-columns: 1fr;
+	}
+
+	.forwp-graph__canvas {
+		height: 480px;
+	}
+
+	.forwp-graph__panel {
+		max-height: none;
+	}
+}
+
+@media (max-width: 600px) {
+	.forwp-graph__charts {
+		grid-template-columns: 1fr;
+	}
+
+	.forwp-graph__search {
+		width: 100%;
+	}
+}

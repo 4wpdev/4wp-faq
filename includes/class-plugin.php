@@ -37,6 +37,7 @@ class Plugin {
 
 		if ( is_admin() ) {
 			Admin_Settings::init();
+			Admin_Graph::init();
 			add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_registry_admin_assets' ] );
 			add_action( 'admin_post_forwp_faq_scan', [ __CLASS__, 'handle_manual_scan' ] );
 			add_action( 'admin_notices', [ __CLASS__, 'render_setup_success_notice' ] );

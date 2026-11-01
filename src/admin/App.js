@@ -14,6 +14,7 @@ import {
 	ExternalLink,
 	ToggleControl,
 	RangeControl,
+	SelectControl,
 	Modal,
 } from '@wordpress/components';
 
@@ -101,6 +102,7 @@ function SettingsTab() {
 	const [ scanning, setScanning ] = useState( false );
 	const [ savingSeo, setSavingSeo ] = useState( false );
 	const [ savingAi, setSavingAi ] = useState( false );
+	const [ savingGraph, setSavingGraph ] = useState( false );
 	const [ resetting, setResetting ] = useState( false );
 	const [ registry, setRegistry ] = useState( null );
 	const [ settings, setSettings ] = useState( null );
@@ -239,6 +241,23 @@ function SettingsTab() {
 			.finally( () => setSavingAi( false ) );
 	};
 
+	const saveGraphSetting = ( data, message ) => {
+		setSavingGraph( true );
+		setError( '' );
+		apiFetch( { path: SETTINGS_PATH, method: 'POST', data } )
+			.then( ( response ) => {
+				setSettings( response );
+				setNotice( message );
+			} )
+			.catch( ( e ) => {
+				setError(
+					e?.message ||
+						__( 'Could not save graph setting.', '4wp-faq' )
+				);
+			} )
+			.finally( () => setSavingGraph( false ) );
+	};
+
 	const onPreviewPerCategory = ( value ) => {
 		const next = typeof value === 'number' ? value : 5;
 		setSavingSeo( true );
@@ -295,6 +314,9 @@ function SettingsTab() {
 	const seoUrlsOn = settings?.seo_urls === true;
 	const aiAvailable = settings?.ai_available === true;
 	const aiFieldMarkupOn = settings?.ai_field_markup === true;
+	const graphAvailable = settings?.graph_available === true;
+	const graphOn = settings?.graph_enabled === true;
+	const graphRenderers = settings?.graph_renderers || [];
 
 	return (
 		<div className="forwp-faq-settings-layout">
@@ -383,6 +405,20 @@ function SettingsTab() {
 									: aiFieldMarkupOn
 									? __( 'Field markup is on.', '4wp-faq' )
 									: __( 'Field markup is off.', '4wp-faq' ) }
+							</span>
+						</button>
+						<button
+							type="button"
+							className="forwp-faq-overview-card"
+							onClick={ () => setSection( 'graph' ) }
+						>
+							<span className="forwp-faq-overview-card__title">
+								{ __( 'Graph', '4wp-faq' ) }
+							</span>
+							<span className="forwp-faq-overview-card__summary">
+								{ graphOn
+									? __( 'Relations view is on.', '4wp-faq' )
+									: __( 'Relations view is off.', '4wp-faq' ) }
 							</span>
 						</button>
 						<button
@@ -617,6 +653,95 @@ function SettingsTab() {
 									'4wp-faq'
 								) }
 							</ExternalLink>
+						</p>
+					) : null }
+				</CardBody>
+			</Card>
+			) : null }
+
+			{ section === 'graph' ? (
+			<Card className="forwp-faq-actions-card">
+				<CardHeader>
+					<h2>{ __( 'Graph', '4wp-faq' ) }</h2>
+				</CardHeader>
+				<CardBody>
+					<p>
+						{ __(
+							'Relations between questions, categories and pages, shown as diagrams on 4WP FAQ → Graph. Admin only.',
+							'4wp-faq'
+						) }
+					</p>
+					{ ! graphAvailable ? (
+						<Notice status="warning" isDismissible={ false }>
+							{ __( 'Graph layer is not loaded.', '4wp-faq' ) }
+						</Notice>
+					) : null }
+					{ ! setupComplete ? (
+						<Notice status="warning" isDismissible={ false }>
+							{ __(
+								'Complete the registry setup first. The graph is built from the registry.',
+								'4wp-faq'
+							) }
+						</Notice>
+					) : null }
+					<ToggleControl
+						label={ __( 'Enable relations graph', '4wp-faq' ) }
+						help={ __(
+							'Adds Graph to the 4WP FAQ menu. Built from the registry on request and cached. Nothing is stored or published.',
+							'4wp-faq'
+						) }
+						checked={ graphOn }
+						disabled={ savingGraph || ! graphAvailable }
+						onChange={ ( enabled ) =>
+							saveGraphSetting(
+								{ graph_enabled: enabled },
+								enabled
+									? __( 'Relations graph enabled. Reload the page to see Graph in the menu.', '4wp-faq' )
+									: __( 'Relations graph disabled.', '4wp-faq' )
+							)
+						}
+					/>
+					<SelectControl
+						label={ __( 'Renderer', '4wp-faq' ) }
+						help={ __(
+							'Library that draws the graph. Bundled with the plugin, no CDN.',
+							'4wp-faq'
+						) }
+						value={ settings?.graph_renderer || 'cytoscape' }
+						options={ graphRenderers.map( ( choice ) => ( {
+							value: choice.value,
+							label: choice.disabled
+								? sprintf(
+										/* translators: %s: library name */
+										__( '%s (planned)', '4wp-faq' ),
+										choice.label
+								  )
+								: choice.label,
+							disabled: choice.disabled,
+						} ) ) }
+						disabled={ savingGraph || ! graphOn }
+						onChange={ ( value ) =>
+							saveGraphSetting(
+								{ graph_renderer: value },
+								__( 'Renderer saved.', '4wp-faq' )
+							)
+						}
+						__nextHasNoMarginBottom
+					/>
+					{ graphOn && setupComplete && settings?.graph_url ? (
+						<p>
+							<Button variant="primary" href={ settings.graph_url }>
+								{ __( 'Open Graph', '4wp-faq' ) }
+							</Button>
+						</p>
+					) : null }
+					{ settings?.graph_layer_version ? (
+						<p className="forwp-faq-actions-card__meta">
+							{ sprintf(
+								/* translators: %s: version */
+								__( 'Graph layer %s', '4wp-faq' ),
+								settings.graph_layer_version
+							) }
 						</p>
 					) : null }
 				</CardBody>

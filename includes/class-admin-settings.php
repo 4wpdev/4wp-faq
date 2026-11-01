@@ -109,6 +109,7 @@ class Admin_Settings {
 		}
 
 		$dashboard = null;
+		$graph     = null;
 		$rest      = [];
 
 		foreach ( $submenu[ $parent ] as $item ) {
@@ -116,12 +117,14 @@ class Admin_Settings {
 				$dashboard = $item;
 				continue;
 			}
+			if ( isset( $item[2] ) && Admin_Graph::PAGE_SLUG === $item[2] ) {
+				$graph = $item;
+				continue;
+			}
 			$rest[] = $item;
 		}
 
-		if ( $dashboard ) {
-			$submenu[ $parent ] = array_merge( [ $dashboard ], $rest );
-		}
+		$submenu[ $parent ] = array_merge( array_filter( [ $dashboard, $graph ] ), $rest ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 	}
 
 	/**
@@ -136,7 +139,7 @@ class Admin_Settings {
 		}
 
 		$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-		if ( self::DASHBOARD_SLUG === $page || self::PAGE_SLUG === $page || self::ADD_GUIDE_SLUG === $page ) {
+		if ( self::DASHBOARD_SLUG === $page || self::PAGE_SLUG === $page || self::ADD_GUIDE_SLUG === $page || Admin_Graph::PAGE_SLUG === $page ) {
 			return 'edit.php?post_type=' . Settings::get_post_type();
 		}
 
